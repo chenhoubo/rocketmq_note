@@ -102,9 +102,13 @@ public class NamesrvController {
 
     public boolean initialize() {
         loadConfig();
+        //创建NettyRemotingServer
         initiateNetworkComponents();
+        // 创建remotingExecutor线程池
         initiateThreadExecutors();
+        // 处理请求
         registerProcessor();
+        // 定义定时任务
         startScheduleService();
         initiateSslContext();
         initiateRpcHooks();
@@ -116,10 +120,15 @@ public class NamesrvController {
     }
 
     private void startScheduleService() {
-        this.scanExecutorService.scheduleAtFixedRate(NamesrvController.this.routeInfoManager::scanNotActiveBroker,
+        //（先延迟5s，后执行指定任务，此后每隔10s，执行指定任务）
+        this.scanExecutorService.scheduleAtFixedRate(
+                // 扫描并剔除不活跃的broker
+                NamesrvController.this.routeInfoManager::scanNotActiveBroker,
             5, this.namesrvConfig.getScanNotActiveBrokerInterval(), TimeUnit.MILLISECONDS);
 
-        this.scheduledExecutorService.scheduleAtFixedRate(NamesrvController.this.kvConfigManager::printAllPeriodically,
+        this.scheduledExecutorService.scheduleAtFixedRate(
+                // 打印所有KV配置信息
+                NamesrvController.this.kvConfigManager::printAllPeriodically,
             1, 10, TimeUnit.MINUTES);
 
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
@@ -132,6 +141,7 @@ public class NamesrvController {
     }
 
     private void initiateNetworkComponents() {
+        // 创建NettyRemotingServer，下面启动控制器的时候会用到
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
         this.remotingClient = new NettyRemotingClient(this.nettyClientConfig);
     }

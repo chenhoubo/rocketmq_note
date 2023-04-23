@@ -22,7 +22,7 @@ public class Producer {
             SendResult sendResult = producer.send(message);//这里是同步消息。
             System.out.println(sendResult);
         }
-        producer.shutdown();
+//        producer.shutdown();
     }
 
 }

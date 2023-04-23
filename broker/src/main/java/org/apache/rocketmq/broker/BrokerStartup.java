@@ -99,13 +99,18 @@ public class BrokerStartup {
                 System.exit(-1);
             }
 
+            // 创建broker配置对象
             final BrokerConfig brokerConfig = new BrokerConfig();
+            // 创建netty服务端配置对象，用于接收请求
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+            // 创建netty客户端配置对象，用于发送请求
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
 
+            // 监听端口10911
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
                 String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
             nettyServerConfig.setListenPort(10911);
+            // 创建消息存储配置对象
             final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 
             if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
@@ -113,6 +118,7 @@ public class BrokerStartup {
                 messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
             }
 
+            // 构建命令行参数
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
                 if (file != null) {
@@ -138,11 +144,14 @@ public class BrokerStartup {
                 System.exit(-2);
             }
 
+            // 获取NameServer地址
             String namesrvAddr = brokerConfig.getNamesrvAddr();
             if (null != namesrvAddr) {
                 try {
+                    // 如果是NameServer是多结点集群模式，则每个地址用分号隔开
                     String[] addrArray = namesrvAddr.split(";");
                     for (String addr : addrArray) {
+                        // 与NameServer创建长连接通道
                         RemotingUtil.string2SocketAddress(addr);
                     }
                 } catch (Exception e) {
@@ -155,10 +164,12 @@ public class BrokerStartup {
 
             if (!brokerConfig.isEnableControllerMode()) {
                 switch (messageStoreConfig.getBrokerRole()) {
+                    // 若当前的Broker属于同步/异步主结点，则设置id为0（即主结点id为0）
                     case ASYNC_MASTER:
                     case SYNC_MASTER:
                         brokerConfig.setBrokerId(MixAll.MASTER_ID);
                         break;
+                    // 若当前的Broker属于从结点，则id只能大于0
                     case SLAVE:
                         if (brokerConfig.getBrokerId() <= 0) {
                             System.out.printf("Slave's brokerId must be > 0");
@@ -189,6 +200,7 @@ public class BrokerStartup {
             }
             configurator.doConfigure(brokerConfig.getRocketmqHome() + "/conf/logback_broker.xml");
 
+            // 解析启动命令-p参数
             if (commandLine.hasOption('p')) {
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig);
@@ -196,7 +208,7 @@ public class BrokerStartup {
                 MixAll.printObjectProperties(console, nettyClientConfig);
                 MixAll.printObjectProperties(console, messageStoreConfig);
                 System.exit(0);
-            } else if (commandLine.hasOption('m')) {
+            } else if (commandLine.hasOption('m')) {// 解析启动命令-m参数
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig, true);
                 MixAll.printObjectProperties(console, nettyServerConfig, true);
@@ -219,6 +231,7 @@ public class BrokerStartup {
                 nettyClientConfig,
                 messageStoreConfig);
             // remember all configs to prevent discard
+            // 加载配置信息
             controller.getConfiguration().registerConfig(properties);
 
             boolean initResult = controller.initialize();
