@@ -728,15 +728,20 @@ public class BrokerController {
 
     public boolean initialize() throws CloneNotSupportedException {
 
+        // 加载topic配置管理器
         boolean result = this.topicConfigManager.load();
         result = result && this.topicQueueMappingManager.load();
+        // 加载消费偏移量管理器
         result = result && this.consumerOffsetManager.load();
+        // 加载订阅组管理器
         result = result && this.subscriptionGroupManager.load();
+        // 加载消费过滤管理器
         result = result && this.consumerFilterManager.load();
         result = result && this.consumerOrderInfoManager.load();
 
         if (result) {
             try {
+                //初始化MessageStore，将消息和映射文件加载到内存中
                 DefaultMessageStore defaultMessageStore = new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener, this.brokerConfig, topicConfigManager.getTopicConfigTable());
 
                 if (messageStoreConfig.isEnableDLegerCommitLog()) {
@@ -785,18 +790,21 @@ public class BrokerController {
 
         if (result) {
 
+            //初始化2个NettyServer，分别监听端口8886和8888
             initializeRemotingServer();
 
+            //初始化执行器，为注册请求处理器做准备
             initializeResources();
 
+            //注册请求处理器
             registerProcessor();
 
+            //开启一系列的单线程提供持久化和监听服务
             initializeScheduledTasks();
 
+            //初始化事务、ACL和钩子函数服务
             initialTransaction();
-
             initialAcl();
-
             initialRpcHooks();
 
             if (TlsSystemConfig.tlsMode != TlsMode.DISABLED) {
@@ -1571,6 +1579,7 @@ public class BrokerController {
             this.registerBrokerAll(true, false, true);
         }
 
+        // 等待10s后，每间隔指定时间（自定义向NameServer上报注册信息时间，或者默认60s）向NameServer发送一次心跳请求，上报Broker信息
         scheduledFutures.add(this.scheduledExecutorService.scheduleAtFixedRate(new AbstractBrokerRunnable(this.getBrokerIdentity()) {
             @Override
             public void run0() {
@@ -1583,6 +1592,7 @@ public class BrokerController {
                         BrokerController.LOG.info("Skip register for broker is isolated");
                         return;
                     }
+                    // 向NameServer发送心跳请求，上报broker信息
                     BrokerController.this.registerBrokerAll(true, false, brokerConfig.isForceRegister());
                 } catch (Throwable e) {
                     BrokerController.LOG.error("registerBrokerAll Exception", e);
@@ -1686,6 +1696,7 @@ public class BrokerController {
             entry -> new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), TopicQueueMappingDetail.cloneAsMappingInfo(entry.getValue()))
         ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
+        //同步broker读写权限
         if (!PermName.isWriteable(this.getBrokerConfig().getBrokerPermission())
             || !PermName.isReadable(this.getBrokerConfig().getBrokerPermission())) {
             ConcurrentHashMap<String, TopicConfig> topicConfigTable = new ConcurrentHashMap<>();
@@ -1704,6 +1715,7 @@ public class BrokerController {
             this.brokerConfig.getBrokerId(),
             this.brokerConfig.getRegisterBrokerTimeoutMills(),
             this.brokerConfig.isInBrokerContainer())) {
+            //发送注册请求，上报broker信息
             doRegisterBrokerAll(checkOrderConfig, oneway, topicConfigWrapper);
         }
     }
@@ -1788,6 +1800,7 @@ public class BrokerController {
         }
     }
 
+    //根据注册响应结果，更新信息
     protected void handleRegisterBrokerResult(List<RegisterBrokerResult> registerBrokerResultList,
         boolean checkOrderConfig) {
         for (RegisterBrokerResult registerBrokerResult : registerBrokerResultList) {
@@ -1798,6 +1811,7 @@ public class BrokerController {
                 }
 
                 this.slaveSynchronize.setMasterAddr(registerBrokerResult.getMasterAddr());
+                // 检查topic config的顺序消息配置
                 if (checkOrderConfig) {
                     this.getTopicConfigManager().updateOrderTopicConfig(registerBrokerResult.getKvTable());
                 }

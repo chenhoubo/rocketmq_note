@@ -52,6 +52,7 @@ public class BrokerStartup {
 
     public static BrokerController start(BrokerController controller) {
         try {
+            //启动控制器
             controller.start();
 
             String tip = String.format("The broker[%s, %s] boot success. serializeType=%s",
@@ -82,12 +83,18 @@ public class BrokerStartup {
     public static BrokerController buildBrokerController(String[] args) throws Exception {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
+        // 创建broker配置对象
         final BrokerConfig brokerConfig = new BrokerConfig();
+        // 创建netty服务端配置对象，用于接收请求
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+        // 创建netty客户端配置对象，用于发送请求
         final NettyClientConfig nettyClientConfig = new NettyClientConfig();
+        // 创建消息存储配置对象
         final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
+        // 监听端口10911
         nettyServerConfig.setListenPort(10911);
 
+        // 构建命令行参数
         Options options = ServerUtil.buildCommandlineOptions(new Options());
         CommandLine commandLine = ServerUtil.parseCmdLine(
             "mqbroker", args, buildCommandlineOptions(options), new DefaultParser());
@@ -96,6 +103,7 @@ public class BrokerStartup {
         }
 
         Properties properties = null;
+        // 解析启动命令-c参数
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -120,12 +128,14 @@ public class BrokerStartup {
             System.exit(-2);
         }
 
-        // Validate namesrvAddr
+        // 获取NameServer地址
         String namesrvAddr = brokerConfig.getNamesrvAddr();
         if (StringUtils.isNotBlank(namesrvAddr)) {
             try {
+                // 如果是NameServer是多结点集群模式，则每个地址用分号隔开
                 String[] addrArray = namesrvAddr.split(";");
                 for (String addr : addrArray) {
+                    // 与NameServer创建长连接通道
                     NetworkUtil.string2SocketAddress(addr);
                 }
             } catch (Exception e) {
@@ -143,10 +153,12 @@ public class BrokerStartup {
         // Set broker role according to ha config
         if (!brokerConfig.isEnableControllerMode()) {
             switch (messageStoreConfig.getBrokerRole()) {
+                // 若当前的Broker属于同步/异步主结点，则设置id为0（即主结点id为0）
                 case ASYNC_MASTER:
                 case SYNC_MASTER:
                     brokerConfig.setBrokerId(MixAll.MASTER_ID);
                     break;
+                // 若当前的Broker属于从结点，则id只能大于0
                 case SLAVE:
                     if (brokerConfig.getBrokerId() <= MixAll.MASTER_ID) {
                         System.out.printf("Slave's brokerId must be > 0%n");
@@ -178,6 +190,7 @@ public class BrokerStartup {
             System.setProperty("brokerLogDir", brokerConfig.getBrokerName() + "_" + messageStoreConfig.getdLegerSelfId());
         }
 
+        // 解析启动命令-p参数
         if (commandLine.hasOption('p')) {
             Logger console = LoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
             MixAll.printObjectProperties(console, brokerConfig);
@@ -185,7 +198,7 @@ public class BrokerStartup {
             MixAll.printObjectProperties(console, nettyClientConfig);
             MixAll.printObjectProperties(console, messageStoreConfig);
             System.exit(0);
-        } else if (commandLine.hasOption('m')) {
+        } else if (commandLine.hasOption('m')) {// 解析启动命令-m参数
             Logger console = LoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
             MixAll.printObjectProperties(console, brokerConfig, true);
             MixAll.printObjectProperties(console, nettyServerConfig, true);
@@ -204,6 +217,7 @@ public class BrokerStartup {
             brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig);
 
         // Remember all configs to prevent discard
+        // 加载配置信息
         controller.getConfiguration().registerConfig(properties);
 
         return controller;
@@ -233,11 +247,14 @@ public class BrokerStartup {
     public static BrokerController createBrokerController(String[] args) {
         try {
             BrokerController controller = buildBrokerController(args);
+            // 初始化broker控制器
             boolean initResult = controller.initialize();
             if (!initResult) {
+                // 初始化失败并关闭控制器
                 controller.shutdown();
                 System.exit(-3);
             }
+            // 向JVM注册关闭钩子函数
             Runtime.getRuntime().addShutdownHook(new Thread(buildShutdownHook(controller)));
             return controller;
         } catch (Throwable e) {

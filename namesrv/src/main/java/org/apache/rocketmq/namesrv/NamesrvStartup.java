@@ -58,6 +58,7 @@ public class NamesrvStartup {
     public static NamesrvController main0(String[] args) {
         try {
             parseCommandlineAndConfigFile(args);
+            //创建namesrv控制器
             NamesrvController controller = createAndStartNamesrvController();
             return controller;
         } catch (Throwable e) {
@@ -83,6 +84,7 @@ public class NamesrvStartup {
     public static void parseCommandlineAndConfigFile(String[] args) throws Exception {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
+        //1.构建命令行参数
         Options options = ServerUtil.buildCommandlineOptions(new Options());
         CommandLine commandLine = ServerUtil.parseCmdLine("mqnamesrv", args, buildCommandlineOptions(options), new DefaultParser());
         if (null == commandLine) {
@@ -90,10 +92,15 @@ public class NamesrvStartup {
             return;
         }
 
+        // 2.创建namesrvconfig对象
         namesrvConfig = new NamesrvConfig();
+        // 3.创建netty服务端配置对象，用于接收请求
         nettyServerConfig = new NettyServerConfig();
+        // 4.创建netty客户端配置对象，用于发送请求
         nettyClientConfig = new NettyClientConfig();
+        // 5.监听9876端口号
         nettyServerConfig.setListenPort(9876);
+        // 6.解析启动命令-c参数
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -115,6 +122,7 @@ public class NamesrvStartup {
         }
 
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), namesrvConfig);
+        // 解析命令参数-p
         if (commandLine.hasOption('p')) {
             MixAll.printObjectProperties(logConsole, namesrvConfig);
             MixAll.printObjectProperties(logConsole, nettyServerConfig);
@@ -136,7 +144,9 @@ public class NamesrvStartup {
 
     public static NamesrvController createAndStartNamesrvController() throws Exception {
 
+        //创建namesrv控制器（作为注册中心，用于接收其他组件注册/获取信息请求）
         NamesrvController controller = createNamesrvController();
+        //启动控制器
         start(controller);
         NettyServerConfig serverConfig = controller.getNettyServerConfig();
         String tip = String.format("The Name Server boot success. serializeType=%s, address %s:%d", RemotingCommand.getSerializeTypeConfigInThisServer(), serverConfig.getBindAddress(), serverConfig.getListenPort());
@@ -148,7 +158,7 @@ public class NamesrvStartup {
     public static NamesrvController createNamesrvController() {
 
         final NamesrvController controller = new NamesrvController(namesrvConfig, nettyServerConfig, nettyClientConfig);
-        // remember all configs to prevent discard
+        //加载配置信息
         controller.getConfiguration().registerConfig(properties);
         return controller;
     }
@@ -159,6 +169,7 @@ public class NamesrvStartup {
             throw new IllegalArgumentException("NamesrvController is null");
         }
 
+        //初始化控制器
         boolean initResult = controller.initialize();
         if (!initResult) {
             controller.shutdown();
@@ -170,6 +181,7 @@ public class NamesrvStartup {
             return null;
         }));
 
+        // 启动控制器
         controller.start();
 
         return controller;

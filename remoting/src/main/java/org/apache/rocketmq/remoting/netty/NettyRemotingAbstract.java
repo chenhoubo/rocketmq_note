@@ -474,19 +474,23 @@ public abstract class NettyRemotingAbstract {
             final ResponseFuture responseFuture = new ResponseFuture(channel, opaque, timeoutMillis, null, null);
             this.responseTable.put(opaque, responseFuture);
             final SocketAddress addr = channel.remoteAddress();
+            // 数据冲刷，添加ChannelFutureListener以便在写操作完成后接收通知
             channel.writeAndFlush(request).addListener((ChannelFutureListener) f -> {
                 if (f.isSuccess()) {
+                    // 写操作完成，sendRequestOK标记为true
                     responseFuture.setSendRequestOK(true);
                     return;
                 }
 
                 responseFuture.setSendRequestOK(false);
+                // 写操作失败，从响应表里移除
                 responseTable.remove(opaque);
                 responseFuture.setCause(f.cause());
                 responseFuture.putResponse(null);
                 log.warn("Failed to write a request command to {}, caused by underlying I/O operation failure", addr);
             });
 
+            // 等待响应
             RemotingCommand responseCommand = responseFuture.waitResponse(timeoutMillis);
             if (null == responseCommand) {
                 if (responseFuture.isSendRequestOK()) {
