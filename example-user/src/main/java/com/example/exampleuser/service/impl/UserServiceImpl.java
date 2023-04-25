@@ -7,7 +7,6 @@ import com.example.exampleuser.model.Order;
 import com.example.exampleuser.model.User;
 import com.example.exampleuser.service.UserService;
 import com.example.exampleuser.utils.ResultMsg;
-import org.apache.rocketmq.client.producer.TransactionSendResult;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
