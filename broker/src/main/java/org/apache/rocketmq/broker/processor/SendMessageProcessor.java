@@ -69,6 +69,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         super(brokerController);
     }
 
+    //收到请求处理
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
@@ -99,9 +100,11 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
                 RemotingCommand response;
                 if (requestHeader.isBatch()) {
+                    //批量消息
                     response = this.sendBatchMessage(ctx, request, traceContext, requestHeader, mappingContext,
                         (ctx1, response1) -> executeSendMessageHookAfter(response1, ctx1));
                 } else {
+                    //非批量消息
                     response = this.sendMessage(ctx, request, traceContext, requestHeader, mappingContext,
                         (ctx12, response12) -> executeSendMessageHookAfter(response12, ctx12));
                 }
@@ -125,6 +128,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
     /**
      * If the response is not null, it meets some errors
+     * 如果响应不为null，则会遇到一些错误
      *
      * @return
      */
@@ -219,24 +223,28 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         final byte[] body = request.getBody();
 
+        //queueId
         int queueIdInt = requestHeader.getQueueId();
         TopicConfig topicConfig = this.brokerController.getTopicConfigManager().selectTopicConfig(requestHeader.getTopic());
 
+        // 如果没有指定queueId，系统随机指定一个
         if (queueIdInt < 0) {
             queueIdInt = randomQueueId(topicConfig.getWriteQueueNums());
         }
 
+        //构造broker内部使用的Message（包装一层）
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        msgInner.setTopic(requestHeader.getTopic());
-        msgInner.setQueueId(queueIdInt);
+        msgInner.setTopic(requestHeader.getTopic());//主题
+        msgInner.setQueueId(queueIdInt);//queueId
 
         Map<String, String> oriProps = MessageDecoder.string2messageProperties(requestHeader.getProperties());
+        //死信消息的处理逻辑---如果是消费重试次数达到上限，就会进入死信队列
         if (!handleRetryAndDLQ(requestHeader, response, request, msgInner, topicConfig, oriProps)) {
             return response;
         }
 
         msgInner.setBody(body);
-        msgInner.setFlag(requestHeader.getFlag());
+        msgInner.setFlag(requestHeader.getFlag());//flag
 
         String uniqKey = oriProps.get(MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX);
         if (uniqKey == null || uniqKey.length() <= 0) {
@@ -246,8 +254,8 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
 
         MessageAccessor.setProperties(msgInner, oriProps);
         msgInner.setTagsCode(MessageExtBrokerInner.tagsString2tagsCode(topicConfig.getTopicFilterType(), msgInner.getTags()));
-        msgInner.setBornTimestamp(requestHeader.getBornTimestamp());
-        msgInner.setBornHost(ctx.channel().remoteAddress());
+        msgInner.setBornTimestamp(requestHeader.getBornTimestamp());//在客户端的生产时间
+        msgInner.setBornHost(ctx.channel().remoteAddress());//在客户端的地址
         msgInner.setStoreHost(this.getStoreHost());
         msgInner.setReconsumeTimes(requestHeader.getReconsumeTimes() == null ? 0 : requestHeader.getReconsumeTimes());
         String clusterName = this.brokerController.getBrokerConfig().getBrokerClusterName();
@@ -275,8 +283,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         if (brokerController.getBrokerConfig().isAsyncSendEnable()) {
             CompletableFuture<PutMessageResult> asyncPutMessageFuture;
             if (sendTransactionPrepareMessage) {
+                //分布式事务 消息的Prepare消息
                 asyncPutMessageFuture = this.brokerController.getTransactionalMessageService().asyncPrepareMessage(msgInner);
             } else {
+                //处理普通消息，和事务消息的Commit/Rollback消息
                 asyncPutMessageFuture = this.brokerController.getMessageStore().asyncPutMessage(msgInner);
             }
 

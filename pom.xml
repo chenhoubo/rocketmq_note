@@ -184,6 +184,10 @@
         <module>container</module>
         <module>controller</module>
         <module>proxy</module>
+        <module>example-shop</module>
+        <module>example-user</module>
+        <module>example-order</module>
+        <module>example-pay</module>
     </modules>
 
     <build>

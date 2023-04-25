@@ -1,0 +1,22 @@
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: shopGroup
+server:
+  port: 8182
+
+spring:
+  datasource:
+    username: root
+    password: Chen123@@@
+    url: jdbc:mysql://localhost:3306/rocketmq-example?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&AllowPublicKeyRetrieval=True
+
+mybatis-plus:
+  mapper-locations: mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  type-aliases-package: com.example.exampleorder.model
+
+example:
+  name: 商品服务

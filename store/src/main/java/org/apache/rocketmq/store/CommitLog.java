@@ -776,15 +776,17 @@ public class CommitLog implements Swappable {
 
     public CompletableFuture<PutMessageResult> asyncPutMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
+        //Message存储到Broker的时间
         if (!defaultMessageStore.getMessageStoreConfig().isDuplicationEnable()) {
             msg.setStoreTimestamp(System.currentTimeMillis());
         }
 
         // Set the message body CRC (consider the most appropriate setting on the client)
+        //Message Body的crc校验码，房子消息内存容易被篡改和破坏
         msg.setBodyCRC(UtilAll.crc32(msg.getBody()));
         // Back to Results
         AppendMessageResult result = null;
-
+        //存储耗时间相关的信息，可以收集这些指标，上报给监控系统
         StoreStatsService storeStatsService = this.defaultMessageStore.getStoreStatsService();
 
         String topic = msg.getTopic();
@@ -804,6 +806,7 @@ public class CommitLog implements Swappable {
         String topicQueueKey = generateKey(putMessageThreadLocal.getKeyBuilder(), msg);
         long elapsedTimeInLock = 0;
         MappedFile unlockMappedFile = null;
+        //获取最近的一个CommitLog文件的内容映射文件（零拷贝）
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
         long currOffset;
@@ -853,6 +856,8 @@ public class CommitLog implements Swappable {
             msg.setEncodedBuff(putMessageThreadLocal.getEncoder().getEncoderBuffer());
             PutMessageContext putMessageContext = new PutMessageContext(topicQueueKey);
 
+            //putMessageLock会有多个线程并行处理，需要上锁，可以在broker中配置是可重入锁还是自旋锁（useReentrantLock）
+            //默认是false，使用自旋锁，异步刷盘建议使用自旋锁，同步刷盘建议使用重入锁
             putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
             try {
                 long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -860,10 +865,12 @@ public class CommitLog implements Swappable {
 
                 // Here settings are stored timestamp, in order to ensure an orderly
                 // global
+                //拿到锁之后，再设置一次，这样可以做到全局有序
                 if (!defaultMessageStore.getMessageStoreConfig().isDuplicationEnable()) {
                     msg.setStoreTimestamp(beginLockTimestamp);
                 }
 
+                //最近的CommitLog文件写满了，再创建一个新的。
                 if (null == mappedFile || mappedFile.isFull()) {
                     mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
                 }
@@ -873,6 +880,7 @@ public class CommitLog implements Swappable {
                     return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, null));
                 }
 
+                //把broker内部的这个Message刷新到MappedFile的内存（注意：这个时候还没有刷盘）
                 result = mappedFile.appendMessage(msg, this.appendMessageCallback, putMessageContext);
                 switch (result.getStatus()) {
                     case PUT_OK:

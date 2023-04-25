@@ -44,6 +44,7 @@ public class MappedFileQueue implements Swappable {
 
     protected final int mappedFileSize;
 
+    //写时复制容器存储
     protected final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
     protected final AllocateMappedFileService allocateMappedFileService;

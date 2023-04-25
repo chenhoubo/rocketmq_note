@@ -64,6 +64,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     /**
      * Wrapping internal implementations for virtually all methods presented in this class.
      */
+    //生产者实现方法逻辑
     protected final transient DefaultMQProducerImpl defaultMQProducerImpl;
     private final InternalLogger log = ClientLogger.getLog();
     private final Set<Integer> retryResponseCodes = new CopyOnWriteArraySet<Integer>(Arrays.asList(
@@ -83,50 +84,62 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      *
      * See <a href="http://rocketmq.apache.org/docs/core-concept/">core concepts</a> for more discussion.
      */
+    //生产组名
     private String producerGroup;
 
     /**
      * Just for testing or demo program
      */
+    //创建主题，默认获取
     private String createTopicKey = TopicValidator.AUTO_CREATE_TOPIC_KEY_TOPIC;
 
     /**
      * Number of queues to create per default topic.
+     * 每个默认主题要创建的队列数
      */
     private volatile int defaultTopicQueueNums = 4;
 
     /**
      * Timeout for sending messages.
+     * 消息发送的超时时间
      */
     private int sendMsgTimeout = 3000;
 
     /**
      * Compress message body threshold, namely, message body larger than 4k will be compressed on default.
+     * 消息超过4K自动压缩
      */
     private int compressMsgBodyOverHowmuch = 1024 * 4;
 
     /**
-     * Maximum number of retry to perform internally before claiming sending failure in synchronous mode. </p>
+     * Maximum number of retry to perform internally before claiming sending failure in synchronous mode.
+     * 在同步模式下声明发送失败之前要在内部执行的最大重试次数。</p>
      *
      * This may potentially cause message duplication which is up to application developers to resolve.
      */
+    //默认重试两次
     private int retryTimesWhenSendFailed = 2;
 
     /**
-     * Maximum number of retry to perform internally before claiming sending failure in asynchronous mode. </p>
+     * Maximum number of retry to perform internally before claiming sending failure in asynchronous mode.
+     * 在异步模式下声明发送失败之前要在内部执行的最大重试次数。</p>
      *
      * This may potentially cause message duplication which is up to application developers to resolve.
      */
+    //默认重试两次
     private int retryTimesWhenSendAsyncFailed = 2;
 
     /**
      * Indicate whether to retry another broker on sending failure internally.
+     * 指示是否在内部发送失败时重试另一个代理。
      */
     private boolean retryAnotherBrokerWhenNotStoreOK = false;
 
     /**
      * Maximum allowed message body size in bytes.
+     * 允许的最大消息正文大小。
      */
+
     private int maxMessageSize = 1024 * 1024 * 4; // 4M
 
     /**
