@@ -1,0 +1,24 @@
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: userGroup
+server:
+  port: 8181
+
+spring:
+  datasource:
+    username: root
+    password: Chen123@@@
+    url: jdbc:mysql://localhost:3306/rocketmq-example?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&AllowPublicKeyRetrieval=True
+    driver-class-name=com: com.mysql.jdbc.Driver
+
+mybatis-plus:
+  mapper-locations: mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  type-aliases-package: com.example.domain.po
+
+example:
+  name: 用户服务
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.exampleuser.dao.UserMapper">
+
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.domain.po.User">
+                <id column="user_id" property="userId" />
+                <result column="user_name" property="userName" />
+                <result column="user_password" property="userPassword" />
+                <result column="user_mobile" property="userMobile" />
+                <result column="user_score" property="userScore" />
+                <result column="user_reg_time" property="userRegTime" />
+                <result column="user_money" property="userMoney" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+    user_id, user_name, user_password, user_mobile, user_score, user_reg_time, user_money
+    </sql>
+
+    <update id="subUserMoney" parameterType="java.lang.Integer">
+        update user set user_money = user_money - #{userMoney}  where user_id = #{userId}
+    </update>
+
+    <update id="addUserScore" parameterType="java.lang.Integer">
+        update user set user_score = user_score + #{userScore}  where user_id = #{userId}
+    </update>
+
+</mapper>

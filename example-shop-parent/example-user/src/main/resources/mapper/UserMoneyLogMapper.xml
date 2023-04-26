@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.exampleuser.dao.UserMoneyLogMapper">
+
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.domain.po.UserMoneyLog">
+                <result column="user_id" property="userId" />
+                <result column="order_id" property="orderId" />
+                <result column="money_log_type" property="moneyLogType" />
+                <result column="use_money" property="useMoney" />
+                <result column="create_time" property="createTime" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+    user_id, order_id, money_log_type, use_money, create_time
+    </sql>
+
+</mapper>
