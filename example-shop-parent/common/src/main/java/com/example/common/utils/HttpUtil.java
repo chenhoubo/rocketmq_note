@@ -1,8 +1,25 @@
 package com.example.common.utils;
 
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
+import cn.hutool.core.map.MapUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.util.EntityUtils;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Map;
+
 
 /**
  * @author Chenhoubo
@@ -11,139 +28,102 @@ import org.springframework.web.client.RestTemplate;
  * @Desc
  * @since seeingflow
  */
+@Slf4j
 public class HttpUtil {
-    /**
-     * get请求
-     *
-     * @param url
-     * @param params 请求参数
-     * @return
-     */
-    public static String get(String url, MultiValueMap<String, String> params) {
-        return get(url, params, null);
-    }
 
-    /**
-     * get请求
-     *
-     * @param url
-     * @param params  请求参数
-     * @param headers 请求头
-     * @return
-     */
-    public static String get(String url, MultiValueMap<String, String> params, MultiValueMap<String, String> headers) {
-        return request(url, params, headers, HttpMethod.GET);
-    }
-
-    /**
-     * post请求
-     *
-     * @param url
-     * @param params 请求参数
-     * @return
-     */
-    public static String post(String url, MultiValueMap<String, String> params) {
-        return post(url, params, null);
-    }
-
-    /**
-     * post请求
-     *
-     * @param url
-     * @param params  请求参数
-     * @param headers 请求头
-     * @return
-     */
-    public static String post(String url, MultiValueMap<String, String> params, MultiValueMap<String, String> headers) {
-        return request(url, params, headers, HttpMethod.POST);
-    }
-
-    /**
-     * put请求
-     *
-     * @param url
-     * @param params 请求参数
-     * @return
-     */
-    public static String put(String url, MultiValueMap<String, String> params) {
-        return put(url, params, null);
-    }
-
-    /**
-     * put请求
-     *
-     * @param url
-     * @param params  请求参数
-     * @param headers 请求头
-     * @return
-     */
-    public static String put(String url, MultiValueMap<String, String> params, MultiValueMap<String, String> headers) {
-        return request(url, params, headers, HttpMethod.PUT);
-    }
-
-    /**
-     * delete请求
-     *
-     * @param url
-     * @param params 请求参数
-     * @return
-     */
-    public static String delete(String url, MultiValueMap<String, String> params) {
-        return delete(url, params, null);
-    }
-
-    /**
-     * delete请求
-     *
-     * @param url
-     * @param params  请求参数
-     * @param headers 请求头
-     * @return
-     */
-    public static String delete(String url, MultiValueMap<String, String> params, MultiValueMap<String, String> headers) {
-        return request(url, params, headers, HttpMethod.DELETE);
-    }
-
-    /**
-     * 表单请求
-     *
-     * @param url
-     * @param params  请求参数
-     * @param headers 请求头
-     * @param method  请求方式
-     * @return
-     */
-    public static String request(String url, MultiValueMap<String, String> params, MultiValueMap<String, String> headers, HttpMethod method) {
-        if (params == null) {
-            params = new LinkedMultiValueMap<>();
+    public static JSONObject get(final String url, final Map<String, Object> params) {
+        CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+        CloseableHttpResponse response = null;
+        StringBuilder urlBuilder = new StringBuilder(url);
+        urlBuilder.append("?");
+        if (MapUtil.isNotEmpty(params)) {
+            for (Map.Entry<String, Object> p : params.entrySet()) {
+                urlBuilder.append(p.getKey()).append("=").append(p.getValue()).append("&");
+            }
         }
-        return request(url, params, headers, method, MediaType.APPLICATION_FORM_URLENCODED);
+        try {
+            HttpGet httpGet = new HttpGet();
+            httpGet.setURI(new URI(urlBuilder.substring(0, urlBuilder.length() - 1)));
+            log.info("\nGET 地址为:" + httpGet.getURI().toString());
+            response = httpClient.execute(httpGet);
+            // 从响应模型中获取响应实体
+            HttpEntity responseEntity = response.getEntity();
+            log.debug("\nGET 响应状态为:" + response.getStatusLine());
+            if (responseEntity != null) {
+                String entityStr = EntityUtils.toString(responseEntity);
+                log.debug("\nGET 响应内容: " + entityStr);
+                log.debug("\nGET 响应内容长度为:" + responseEntity.getContentLength());
+                return JSON.parseObject(entityStr);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                // 释放资源
+                if (httpClient != null) {
+                    httpClient.close();
+                }
+                if (response != null) {
+                    response.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+    public static JSONObject post(final String url, final Map<String, Object> params) {
+        HttpPost post = new HttpPost();
+        post.setURI(URI.create(url));
+        post.setHeader(new BasicHeader("Content-Type", "application/json;charset=UTF-8"));
+        post.setEntity(new StringEntity(JSON.toJSONString(params), StandardCharsets.UTF_8));
+        JSONObject jsonObject = post(post);
+        return jsonObject;
+
+//        HttpPost post = new HttpPost();
+//        post.setURI(URI.create("https://bbb.com/c/d?e=f"));
+//        post.setHeader(new BasicHeader("Content-Type", "application/x-www-form-urlencoded"));
+//        List<NameValuePair> pairs = CollUtil.newArrayList();
+//        pairs.add(new BasicNameValuePair("g", "h"));
+//        pairs.add(new BasicNameValuePair("i", "j"));
+//        post.setEntity(new UrlEncodedFormEntity(pairs, StandardCharsets.UTF_8));
+//        JSONObject jsonObject = post(post);
+//        System.out.println(jsonObject);
+    }
+    public static JSONObject post(HttpPost httpPost) {
+        CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+        CloseableHttpResponse response = null;
+        try {
+            log.info("\nPOST 地址为: " + httpPost.getURI().toString());
+            log.info("\nPOST 请求头为: " + Arrays.toString(httpPost.getAllHeaders()));
+            log.info("\nPOST 内容为: " + httpPost.getEntity());
+            // 由客户端执行(发送)Post请求
+            response = httpClient.execute(httpPost);
+            // 从响应模型中获取响应实体
+            HttpEntity responseEntity = response.getEntity();
+            log.debug("\nPOST 响应状态为:" + response.getStatusLine());
+            if (responseEntity != null) {
+                String entityStr = EntityUtils.toString(responseEntity);
+                log.debug("\nPOST 响应内容: " + entityStr);
+                log.debug("\nPOST 响应内容长度为:" + responseEntity.getContentLength());
+                return JSON.parseObject(entityStr);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                // 释放资源
+                if (httpClient != null) {
+                    httpClient.close();
+                }
+                if (response != null) {
+                    response.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
-    /**
-     * http请求
-     *
-     * @param url
-     * @param params    请求参数
-     * @param headers   请求头
-     * @param method    请求方式
-     * @param mediaType 参数类型
-     * @return
-     */
-    public static String request(String url, Object params, MultiValueMap<String, String> headers, HttpMethod method, MediaType mediaType) {
-        if (url == null || url.trim().isEmpty()) {
-            return null;
-        }
-        RestTemplate client = new RestTemplate();
-        // header
-        HttpHeaders httpHeaders = new HttpHeaders();
-        if (headers != null) {
-            httpHeaders.addAll(headers);
-        }
-        // 提交方式：表单、json
-        httpHeaders.setContentType(mediaType);
-        HttpEntity<Object> httpEntity = new HttpEntity(params, httpHeaders);
-        ResponseEntity<String> response = client.exchange(url, method, httpEntity, String.class);
-        return response.getBody();
-    }
 }

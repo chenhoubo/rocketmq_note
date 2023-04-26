@@ -1,6 +1,7 @@
 package org.apache.rocketmq.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.common.utils.HttpUtil;
 import com.example.common.utils.ResultMsg;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.alibaba.fastjson.JSON.toJSONString;
@@ -54,8 +56,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
 
         //查询当前用户余额是否足够
-        MultiValueMap<String, String> paramMap = (MultiValueMap<String, String>) JSON.parseObject("{\"userId\": \" " + order.getUserId() + "\"}", Map.class);
-        String result= HttpUtil.get("http://localhost:8183/user/getUserMoney", paramMap);
+        HashMap<String, Object> paramMap = new HashMap<>();
+        paramMap.put("userId", order.getUserId());
+        JSONObject result= HttpUtil.get("http://localhost:8183/user/getUserMoney", paramMap);
         ResultMsg<BigDecimal> resultMsg = JSON.parseObject(toJSONString(result), ResultMsg.class);
         if(!resultMsg.checkSuccess()){
             return ResultMsg.error(resultMsg.getErrorMsg());

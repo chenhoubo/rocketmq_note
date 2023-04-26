@@ -1,6 +1,7 @@
 package com.example.exampleuser.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.common.utils.HttpUtil;
 import com.example.common.utils.ResultMsg;
@@ -16,6 +17,7 @@ import org.springframework.util.MultiValueMap;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.alibaba.fastjson.JSON.toJSONString;
@@ -35,14 +37,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public ResultMsg createOrder(Order order) {
         //远程调用创建订单的请求
-        MultiValueMap<String, String> paramMap = (MultiValueMap<String, String>) JSON.parseObject(JSON.toJSONString(order), Map.class);
-        String result3= HttpUtil.post("http://localhost:8181/order/addOrder", paramMap);
-        ResultMsg resultMsg = JSON.parseObject(toJSONString(result3), ResultMsg.class);
+        Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(order), HashMap.class);
+        JSONObject jsonObject = HttpUtil.post("http://localhost:8181/order/addOrder", paramMap);
+        ResultMsg resultMsg = JSON.parseObject(toJSONString(jsonObject), ResultMsg.class);
         if(!resultMsg.checkSuccess()){
             return resultMsg;
         }
-
-
 
 
 
@@ -67,9 +67,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public ResultMsg addOrderPay(OrderPay orderPay) {
         //远程调用支付业务请求
         orderPay.setIsPaid(1);
-        MultiValueMap<String, String> paramMap = (MultiValueMap<String, String>) JSON.parseObject(JSON.toJSONString(orderPay), Map.class);
-        String result3= HttpUtil.post("http://localhost:8184/orderPay/addOrderPay", paramMap);
-        ResultMsg resultMsg = JSON.parseObject(toJSONString(result3), ResultMsg.class);
+        Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(orderPay), Map.class);
+        JSONObject post = HttpUtil.post("http://localhost:8184/orderPay/addOrderPay", paramMap);
+        ResultMsg resultMsg = JSON.parseObject(toJSONString(post), ResultMsg.class);
 
         //mq事务消息 扣减用户余额
         UserMoneyLog userMoneyLog = new UserMoneyLog();
