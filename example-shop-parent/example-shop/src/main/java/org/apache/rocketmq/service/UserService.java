@@ -5,6 +5,7 @@ import com.example.common.utils.ResultMsg;
 import com.example.domain.po.Order;
 import com.example.domain.po.OrderPay;
 import com.example.domain.po.User;
+import com.example.domain.po.UserMoneyLog;
 
 import java.math.BigDecimal;
 
@@ -22,4 +23,6 @@ public interface UserService extends IService<User> {
     ResultMsg<BigDecimal> getUserMoney(Long userId);
 
     ResultMsg addUserScore(Long userId, Integer userScore);
+
+    ResultMsg changeUserMoney(UserMoneyLog userMoneyLog);
 }

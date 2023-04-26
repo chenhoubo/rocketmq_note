@@ -27,4 +27,8 @@
         update user set user_score = user_score + #{userScore}  where user_id = #{userId}
     </update>
 
+    <update id="addUserMoney" parameterType="java.lang.Integer">
+        update user set user_money = user_money + #{userMoney}  where user_id = #{userId}
+    </update>
+
 </mapper>

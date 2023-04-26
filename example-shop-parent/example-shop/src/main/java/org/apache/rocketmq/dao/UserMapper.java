@@ -21,4 +21,6 @@ public interface UserMapper extends BaseMapper<User> {
 
     void addUserScore(@Param("userId") Long userId, @Param("userScore") Integer userScore);
 
+    void addUserMoney(@Param("userId") Long userId, @Param("userMoney") BigDecimal userMoney);
+
 }

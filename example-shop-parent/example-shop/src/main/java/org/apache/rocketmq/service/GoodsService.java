@@ -3,6 +3,7 @@ package org.apache.rocketmq.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.Goods;
+import com.example.domain.po.GoodsOrderLog;
 
 /**
 * @author seeingflow
@@ -12,4 +13,8 @@ import com.example.domain.po.Goods;
 */
 public interface GoodsService extends IService<Goods> {
     ResultMsg subtractStock(Long goodsId, Integer number);
+
+    ResultMsg reduceGoodsNum(GoodsOrderLog goodsNumberLog);
+
+
 }

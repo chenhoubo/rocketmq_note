@@ -2,17 +2,23 @@ package org.apache.rocketmq.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.common.enums.ShopCode;
+import com.example.common.exception.ShopException;
 import com.example.common.utils.HttpUtil;
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.*;
 import org.apache.rocketmq.client.producer.TransactionSendResult;
+import org.apache.rocketmq.dao.OrderPayMapper;
 import org.apache.rocketmq.dao.UserMapper;
+import org.apache.rocketmq.dao.UserMoneyLogMapper;
 import org.apache.rocketmq.service.UserService;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -32,6 +38,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private RocketMQTemplate rocketMQTemplate;
+
+    @Autowired
+    private OrderPayMapper orderPayMapper;
+
+    @Autowired
+    private UserMoneyLogMapper userMoneyLogExample;
 
     @Override
     public ResultMsg createOrder(Order order) {
@@ -93,6 +105,60 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public ResultMsg addUserScore(Long userId, Integer userScore) {
         baseMapper.addUserScore(userId, userScore);
+        return ResultMsg.success();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public ResultMsg changeUserMoney(UserMoneyLog userMoneyLog) {
+        //判断请求参数是否合法
+        if (userMoneyLog == null
+                || userMoneyLog.getUserId() == null
+                || userMoneyLog.getUseMoney() == null
+                || userMoneyLog.getOrderId() == null
+                || userMoneyLog.getUseMoney().compareTo(BigDecimal.ZERO) <= 0) {
+            ShopException.cast(ShopCode.SHOP_REQUEST_PARAMETER_VALID);
+        }
+
+        //查询该订单是否存在付款记录
+        QueryWrapper orderPayExample = new QueryWrapper<UserMoneyLog>();
+        orderPayExample.eq("order_id", userMoneyLog.getOrderId());
+        orderPayExample.eq("user_id",userMoneyLog.getUserId());
+        int count = userMoneyLogExample.selectCount(orderPayExample);
+        //判断余额操作行为
+        //【付款操作】
+        if (userMoneyLog.getMoneyLogType().equals(ShopCode.SHOP_USER_MONEY_PAID.getCode())) {
+            //订单已经付款，则抛异常
+            if (count > 0) {
+                ShopException.cast(ShopCode.SHOP_ORDER_PAY_STATUS_IS_PAY);
+            }
+            //用户账户扣减余额
+            baseMapper.subUserMoney(userMoneyLog.getUserId(), userMoneyLog.getUseMoney());
+        }
+        //【退款操作】
+        if (userMoneyLog.getMoneyLogType().equals(ShopCode.SHOP_USER_MONEY_REFUND.getCode())) {
+            //如果订单未付款,则不能退款,抛异常
+            if (count == 0) {
+                ShopException.cast(ShopCode.SHOP_ORDER_PAY_STATUS_NO_PAY);
+            }
+            //防止多次退款
+            orderPayExample = new QueryWrapper<UserMoneyLog>();
+            orderPayExample.eq("order_id", userMoneyLog.getOrderId());
+            orderPayExample.eq("user_id",userMoneyLog.getUserId());
+            orderPayExample.eq("money_log_type",ShopCode.SHOP_USER_MONEY_REFUND.getCode());
+
+            count = userMoneyLogExample.selectCount(orderPayExample);
+            if (count > 0) {
+                ShopException.cast(ShopCode.SHOP_USER_MONEY_REFUND_ALREADY);
+            }
+            //用户账户添加余额
+            baseMapper.addUserMoney(userMoneyLog.getUserId(), userMoneyLog.getUseMoney());
+        }
+
+
+        //记录用户使用余额日志
+        userMoneyLog.setCreateTime(new Date());
+        userMoneyLogExample.insert(userMoneyLog);
         return ResultMsg.success();
     }
 }

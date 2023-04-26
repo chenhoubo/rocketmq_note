@@ -2,6 +2,7 @@ package org.apache.rocketmq.controller;
 
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.Order;
+import com.example.domain.to.ConfirmOrderTo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -27,10 +28,10 @@ import org.springframework.web.bind.annotation.RestController;
     @Autowired
     public OrderService orderService;
 
-    @ApiOperation("创建订单")
-    @PostMapping("/addOrder")
-    public ResultMsg<Long> addOrder(@RequestBody Order order){
-        return orderService.addOrder(order);
+    @ApiOperation("确认订单")
+    @PostMapping("/confirmOrder")
+    public ResultMsg<Long> confirmOrder(@RequestBody ConfirmOrderTo confirmOrderTo){
+        return orderService.confirmOrder(confirmOrderTo);
     }
 
 

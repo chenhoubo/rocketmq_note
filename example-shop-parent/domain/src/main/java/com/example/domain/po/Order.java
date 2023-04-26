@@ -22,7 +22,6 @@ import java.util.Date;
 @ApiModel(value = "Order对象", description = "订单表")
 public class Order {
 
-
     @ApiModelProperty(value = "订单ID")
     @TableId(value = "order_id", type = IdType.AUTO)
     private Long orderId;

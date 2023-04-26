@@ -3,6 +3,7 @@ package org.apache.rocketmq.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.Order;
+import com.example.domain.to.ConfirmOrderTo;
 
 /**
 * @author seeingflow
@@ -12,5 +13,5 @@ import com.example.domain.po.Order;
 */
 public interface OrderService extends IService<Order> {
 
-    ResultMsg<Long> addOrder(Order order);
+    ResultMsg<Long> confirmOrder(ConfirmOrderTo confirmOrderTo);
 }

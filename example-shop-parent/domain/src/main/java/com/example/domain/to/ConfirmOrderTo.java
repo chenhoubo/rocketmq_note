@@ -20,7 +20,7 @@ import java.util.Date;
 @Data
 @TableName("order")
 @ApiModel(value = "Order对象", description = "订单表")
-public class AddOrderTo {
+public class ConfirmOrderTo {
 
 
     @ApiModelProperty(value = "订单ID")

@@ -78,4 +78,8 @@ public class ResultMsg<T> {
         return new ResultMsg<T>(500, errorMsg);
     }
 
+    public static <T> ResultMsg<T> error(int code, String errorMsg) {
+        return new ResultMsg<T>(code, errorMsg);
+    }
+
 }
