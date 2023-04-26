@@ -1,12 +1,12 @@
-package com.example.exampleuser.controller;
+package org.apache.rocketmq.controller;
 
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.Order;
 import com.example.domain.po.OrderPay;
-import com.example.exampleuser.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.rocketmq.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

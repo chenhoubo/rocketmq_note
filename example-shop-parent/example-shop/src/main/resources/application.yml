@@ -3,7 +3,7 @@ rocketmq:
   producer:
     group: shopGroup
 server:
-  port: 8182
+  port: 8181
 
 spring:
   datasource:

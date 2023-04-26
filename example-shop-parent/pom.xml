@@ -33,7 +33,6 @@
 
     <modules>
         <module>example-shop</module>
-        <module>example-user</module>
         <module>domain</module>
         <module>common</module>
     </modules>

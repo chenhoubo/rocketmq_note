@@ -1,4 +1,4 @@
-package com.example.exampleuser.dao;
+package org.apache.rocketmq.dao;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.domain.po.UserMoneyLog;

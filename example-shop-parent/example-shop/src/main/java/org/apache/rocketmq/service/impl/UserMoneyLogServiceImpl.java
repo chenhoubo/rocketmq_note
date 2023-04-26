@@ -1,10 +1,10 @@
-package com.example.exampleuser.service.impl;
+package org.apache.rocketmq.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.UserMoneyLog;
-import com.example.exampleuser.dao.UserMoneyLogMapper;
-import com.example.exampleuser.service.UserMoneyLogService;
+import org.apache.rocketmq.dao.UserMoneyLogMapper;
+import org.apache.rocketmq.service.UserMoneyLogService;
 import org.springframework.stereotype.Service;
 
 /**

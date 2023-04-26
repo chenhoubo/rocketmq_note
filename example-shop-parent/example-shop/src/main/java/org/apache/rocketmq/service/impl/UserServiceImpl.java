@@ -1,4 +1,4 @@
-package com.example.exampleuser.service.impl;
+package org.apache.rocketmq.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -6,14 +6,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.common.utils.HttpUtil;
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.*;
-import com.example.exampleuser.dao.UserMapper;
-import com.example.exampleuser.service.UserService;
 import org.apache.rocketmq.client.producer.TransactionSendResult;
+import org.apache.rocketmq.dao.UserMapper;
+import org.apache.rocketmq.service.UserService;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MultiValueMap;
 
 import java.math.BigDecimal;
 import java.util.Date;
