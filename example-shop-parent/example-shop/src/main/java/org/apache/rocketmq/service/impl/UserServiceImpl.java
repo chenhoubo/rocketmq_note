@@ -44,8 +44,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
 
-
-
         //mq事务消息 扣减库存
         GoodsOrderLog goodsOrderLog = new GoodsOrderLog();
         goodsOrderLog.setOrderId((Long)resultMsg.getData());
