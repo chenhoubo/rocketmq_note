@@ -4,6 +4,8 @@ rocketmq:
     group: orderProducerGroup
 server:
   port: 8181
+  servlet:
+    context-path: /example-shop
 
 mq:
   order:
@@ -14,11 +16,20 @@ mq:
     tag:
       confirm: order_confirm
       cancel: order_cancel
+  pay:
+    consumer:
+      group:
+        name: pay_payTopic_group
+    topic: payTopic
+    tag:
+      pay: pay_confirm
 
 
 spring:
   application:
     name: example-shop
+  profiles:
+    active: dev
   datasource:
     username: root
     password: Chen123@@@

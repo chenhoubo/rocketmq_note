@@ -1,7 +1,6 @@
 package com.example.common.exception;
 
 import com.example.common.enums.ShopCode;
-import com.google.common.annotations.VisibleForTesting;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
@@ -48,7 +47,6 @@ public class ShopException extends RuntimeException {
         return message;
     }
 
-    @VisibleForTesting
     public static String doFormat(int code, String messagePattern, Object... params) {
         StringBuilder sbuf = new StringBuilder(messagePattern.length() + 50);
         int i = 0;

@@ -1,6 +1,8 @@
 package com.example.domain.po;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -19,6 +21,9 @@ import java.util.Date;
 @ApiModel(value = "GoodsOrderLog对象", description = "订单商品日志表")
 public class GoodsOrderLog {
 
+    @ApiModelProperty(value = "id")
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id;
 
     @ApiModelProperty(value = "商品ID")
     @TableField("goods_id")

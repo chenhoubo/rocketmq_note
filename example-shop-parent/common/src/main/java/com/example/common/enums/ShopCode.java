@@ -33,11 +33,18 @@ public enum ShopCode implements IErrorCode {
     SHOP_MQ_SEND_MESSAGE_FAIL(818101017, "MQ消息发送失败"),
     SHOP_MQ_TOPIC_IS_EMPTY(818101018, "MQ-topic不能为空"),
     SHOP_MQ_MESSAGE_BODY_IS_EMPTY(818101019, "MQ-消息内容不能为空"),
+    SHOP_PAYMENT_NOT_FOUND(818101020, "未找到支付账单"),
+    SHOP_PAYMENT_IS_PAID(818101021, "支付账单失败"),
 
 //    订单枚举
     SHOP_ORDER_NO_CONFIRM(0, "未确认"),
     SHOP_ORDER_CONFIRM(1, "已确认"),
     SHOP_ORDER_CANCEL(2,"已取消"),
+
+//    订单消息状态
+    SHOP_ORDER_MESSAGE_STATUS_CANCEL(1, "订单状态取消"),
+    SHOP_ORDER_MESSAGE_STATUS_ISPAID(2,"订单消息已支付"),
+
 
 //    优惠券枚举
     SHOP_COUPON_UNUSED(0, "未使用"),

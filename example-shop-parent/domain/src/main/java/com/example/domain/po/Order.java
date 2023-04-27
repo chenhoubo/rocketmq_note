@@ -18,7 +18,7 @@ import java.util.Date;
 * @since seeingflow
 */
 @Data
-@TableName("order")
+@TableName("exa_order")
 @ApiModel(value = "Order对象", description = "订单表")
 public class Order {
 

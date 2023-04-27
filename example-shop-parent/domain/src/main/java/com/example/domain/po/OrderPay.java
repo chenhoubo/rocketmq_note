@@ -41,6 +41,4 @@ public class OrderPay {
     @TableField("is_paid")
     private Integer isPaid;
 
-
-
 }
