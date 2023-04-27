@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.apache.rocketmq.dao.ProducerMsgMapper">
+
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.domain.po.ProducerMsg">
+                <id column="id" property="id" />
+                <result column="group_name" property="groupName" />
+                <result column="msg_topic" property="msgTopic" />
+                <result column="msg_tag" property="msgTag" />
+                <result column="msg_key" property="msgKey" />
+                <result column="msg_body" property="msgBody" />
+                <result column="msg_status" property="msgStatus" />
+                <result column="create_time" property="createTime" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+    id, group_name, msg_topic, msg_tag, msg_key, msg_body, msg_status, create_time
+    </sql>
+
+</mapper>

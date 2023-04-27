@@ -23,22 +23,34 @@ public enum ShopCode implements IErrorCode {
     SHOP_REDUCE_GOODS_NUM_FAIL(818101009, "扣减库存失败"),
     SHOP_REQUEST_PARAMETER_VALID(818101010, "参数为空"),
     SHOP_COUPON_USE_FAIL(818101011, "优惠券使用失败"),
-    SHOP_ORDER_PAY_STATUS_IS_PAY(818101012, "订单已付款"),
-    SHOP_ORDER_PAY_STATUS_NO_PAY(818101013, "未付款，暂无退款信息"),
+    SHOP_ORDER_PAY_STATUS_IS_PAY(2, "订单已付款"),
+    SHOP_ORDER_PAY_STATUS_NO_PAY(0, "未付款，暂无退款信息"),
     SHOP_USER_MONEY_REFUND_ALREADY(818101014, "已退款，请勿重复操作"),
 
     SHOP_USER_MONEY_REDUCE_FAIL(818101015, "扣减用户余额失败"),
 
+    SHOP_ORDER_CONFIRM_FAIL(818101016, "订单确认失败"),
+    SHOP_MQ_SEND_MESSAGE_FAIL(818101017, "MQ消息发送失败"),
+    SHOP_MQ_TOPIC_IS_EMPTY(818101018, "MQ-topic不能为空"),
+    SHOP_MQ_MESSAGE_BODY_IS_EMPTY(818101019, "MQ-消息内容不能为空"),
+
 //    订单枚举
-    SHOP_ORDER_NO_CONFIRM(1, "未确认"),
+    SHOP_ORDER_NO_CONFIRM(0, "未确认"),
+    SHOP_ORDER_CONFIRM(1, "已确认"),
+    SHOP_ORDER_CANCEL(2,"已取消"),
 
 //    优惠券枚举
-    SHOP_COUPON_NOT_USED(0, "未使用"),
+    SHOP_COUPON_UNUSED(0, "未使用"),
     SHOP_COUPON_ISUSED(1, "已使用"),
 
 //    金额日志类型
     SHOP_USER_MONEY_PAID(1, "订单付款"),
     SHOP_USER_MONEY_REFUND(2,"订单退款"),
+
+//消息处理状态
+    SHOP_MQ_MESSAGE_STATUS_PROCESSING(0,"消息正在处理"),
+    SHOP_MQ_MESSAGE_STATUS_SUCCESS(1,"消息处理成功"),
+    SHOP_MQ_MESSAGE_STATUS_FAIL(2,"消息处理失败"),
 
         ;
 

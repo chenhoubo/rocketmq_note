@@ -1,9 +1,20 @@
 rocketmq:
   name-server: localhost:9876
   producer:
-    group: shopGroup
+    group: orderProducerGroup
 server:
   port: 8181
+
+mq:
+  order:
+    consumer:
+      group:
+        name: order_orderTopic_cancel_group
+    topic: orderTopic
+    tag:
+      confirm: order_confirm
+      cancel: order_cancel
+
 
 spring:
   application:

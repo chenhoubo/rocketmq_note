@@ -1,21 +1,27 @@
 package org.apache.rocketmq.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.common.enums.ShopCode;
 import com.example.common.exception.ShopException;
 import com.example.common.utils.ResultMsg;
 import com.example.domain.po.*;
+import com.example.domain.to.CancelOrderMQ;
 import com.example.domain.to.ConfirmOrderTo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.dao.OrderMapper;
 import org.apache.rocketmq.service.CouponService;
 import org.apache.rocketmq.service.GoodsService;
 import org.apache.rocketmq.service.OrderService;
 import org.apache.rocketmq.service.UserService;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -40,6 +46,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Autowired
     private CouponService couponService;
 
+    @Autowired
+    private RocketMQTemplate rocketMQTemplate;
+
+    @Value("${mq.order.topic}")
+    private String topic;
+
+    @Value("${mq.order.tag.cancel}")
+    private String cancelTag;
+
+    @Transactional
     @Override
     public ResultMsg<Long> confirmOrder(ConfirmOrderTo confirmOrderTo) {
         //1.校验订单
@@ -49,26 +65,37 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         try {
             //3.扣减库存
             reduceGoodsNum(order);
-
             //todo 4.扣减优惠券
 //            changeCoponStatus(order);
-
             //5.使用余额
             reduceMoneyPaid(order);
-
             //6.确认订单
-
+            updateOrderStatus(order);
             //7.返回成功状态
-
+            log.info("订单:["+orderId+"]确认成功");
+            return ResultMsg.success(orderId);
         } catch (Exception e) {
             //1.确认订单失败,发送消息
-
+            //确认订单失败,发送消息
+            CancelOrderMQ cancelOrderMQ = new CancelOrderMQ();
+            cancelOrderMQ.setOrderId(order.getOrderId());
+            cancelOrderMQ.setCouponId(order.getCouponId());
+            cancelOrderMQ.setGoodsId(order.getGoodsId());
+            cancelOrderMQ.setGoodsNumber(order.getGoodsNumber());
+            cancelOrderMQ.setUserId(order.getUserId());
+            cancelOrderMQ.setUserMoney(order.getMoneyPaid());
+            try {
+                sendMessage(topic,
+                        cancelTag,
+                        cancelOrderMQ.getOrderId().toString(),
+                        JSON.toJSONString(cancelOrderMQ));
+            } catch (Exception e1) {
+                e1.printStackTrace();
+                ShopException.cast(ShopCode.SHOP_MQ_SEND_MESSAGE_FAIL);
+            }
             //2.返回失败状态
+            return ResultMsg.error();
         }
-
-
-
-        return ResultMsg.success(order.getOrderId());
     }
 
     private Order checkOrder(ConfirmOrderTo confirmOrderTo) {
@@ -202,6 +229,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
     }
 
+    private void updateOrderStatus(Order order) {
+        order.setOrderStatus(ShopCode.SHOP_ORDER_CONFIRM.getCode());
+        order.setPayStatus(ShopCode.SHOP_ORDER_PAY_STATUS_NO_PAY.getCode());
+        order.setConfirmTime(new Date());
+        int r = baseMapper.updateById(order);
+        if (r <= 0) {
+            ShopException.cast(ShopCode.SHOP_ORDER_CONFIRM_FAIL);
+        }
+        log.info("订单:["+order.getOrderId()+"]状态修改成功");
+    }
 
+    private void sendMessage(String topic, String tags, String keys, String body) throws Exception {
+        //判断Topic是否为空
+        if (StringUtils.isEmpty(topic)) {
+            ShopException.cast(ShopCode.SHOP_MQ_TOPIC_IS_EMPTY);
+        }
+        //判断消息内容是否为空
+        if (StringUtils.isEmpty(body)) {
+            ShopException.cast(ShopCode.SHOP_MQ_MESSAGE_BODY_IS_EMPTY);
+        }
+        //消息体
+        Message message = new Message(topic, tags, keys, body.getBytes());
+        //发送消息
+        rocketMQTemplate.getProducer().send(message);
+    }
 
 }
