@@ -118,6 +118,7 @@ public class CancelMQListener implements RocketMQListener<MessageExt> {
                 mqConsumerLog.setMsgBody(body);
                 mqConsumerLog.setMsgId(msgId);
                 mqConsumerLog.setConsumerTimes(0);
+                mqConsumerLog.setGroupName(groupName);
 
                 //将消息处理信息添加到数据库
                 mqConsumerLogMapper.insert(mqConsumerLog);

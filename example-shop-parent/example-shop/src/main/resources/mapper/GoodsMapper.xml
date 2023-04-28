@@ -19,7 +19,7 @@
     goods_id, goods_name, goods_number, goods_price, goods_desc, add_time, update_time
     </sql>
 
-    <update id="subtractStock" parameterType="java.lang.Integer">
+    <update id="subtractStock">
         update goods set goods_number = goods_number - #{number},update_time = sysdate()  where goods_id = #{goodsId}
     </update>
 

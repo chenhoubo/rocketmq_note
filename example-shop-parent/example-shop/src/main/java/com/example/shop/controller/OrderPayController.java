@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
     public OrderPayService orderPayService;
 
 
-    @ApiOperation("添加订单支付记录")
+    @ApiOperation("订单支付")
     @PostMapping("/createPayment")
     public ResultMsg createPayment(@RequestBody OrderPay orderPay){
         return orderPayService.createPayment(orderPay);

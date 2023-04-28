@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 
@@ -53,6 +54,7 @@ public class OrderPayServiceImpl extends ServiceImpl<OrderPayMapper, OrderPay> i
     @Autowired
     private RocketMQTemplate rocketMQTemplate;
 
+    @Transactional
     @Override
     public ResultMsg createPayment(OrderPay orderPay) {
         //查询订单支付状态
@@ -72,6 +74,7 @@ public class OrderPayServiceImpl extends ServiceImpl<OrderPayMapper, OrderPay> i
             orderPay.setIsPaid(ShopCode.SHOP_ORDER_PAY_STATUS_IS_PAY.getCode());
             callbackPayment(orderPay);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResultMsg.error();
         }
         return ResultMsg.success();
