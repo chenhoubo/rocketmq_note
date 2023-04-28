@@ -55,9 +55,21 @@ public class MQFaultStrategy {
         this.sendLatencyFaultEnable = sendLatencyFaultEnable;
     }
 
+
+    /**
+     * 根据 Topic发布信息 选择一个消息队列
+     * 默认情形下向所有Broker的MessageQueue按顺序轮流发送
+     *
+     * @param tpInfo         Topic发布信息
+     * @param lastBrokerName
+     * @return 消息队列
+     */
     public MessageQueue selectOneMessageQueue(final TopicPublishInfo tpInfo, final String lastBrokerName) {
-        if (this.sendLatencyFaultEnable) {
+        if (this.sendLatencyFaultEnable) {//如果开启了延迟容错机制，默认未开启
             try {
+                //循环所有MessageQueue
+                // 当 lastBrokerName == null 时，获取第一个可用的MessageQueue
+                // 当 lastBrokerName != null 时, 获取 brokerName=lastBrokerName && 可用的MessageQueue
                 int index = tpInfo.getSendWhichQueue().incrementAndGet();
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
                     int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();
@@ -68,6 +80,7 @@ public class MQFaultStrategy {
                         return mq;
                 }
 
+                // 选择一个相对好的broker，并获得其对应的一个消息队列，按 可用性 > 延迟 > 开始可用时间 选择
                 final String notBestBroker = latencyFaultTolerance.pickOneAtLeast();
                 int writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);
                 if (writeQueueNums > 0) {
@@ -84,9 +97,11 @@ public class MQFaultStrategy {
                 log.error("Error occurred when selecting message queue", e);
             }
 
+            // 选择一个消息队列，不考虑队列的可用性
             return tpInfo.selectOneMessageQueue();
         }
 
+        // 默认情况下,获得 lastBrokerName 对应的一个消息队列，不考虑该队列的可用性
         return tpInfo.selectOneMessageQueue(lastBrokerName);
     }
 

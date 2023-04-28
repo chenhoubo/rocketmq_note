@@ -67,6 +67,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     //生产者实现方法逻辑
     protected final transient DefaultMQProducerImpl defaultMQProducerImpl;
     private final InternalLogger log = ClientLogger.getLog();
+
+    // 如下异常continue，进行发送消息重试
     private final Set<Integer> retryResponseCodes = new CopyOnWriteArraySet<Integer>(Arrays.asList(
             ResponseCode.TOPIC_NOT_EXIST,
             ResponseCode.SERVICE_NOT_AVAILABLE,
@@ -274,14 +276,16 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
         this.namespace = namespace;
         this.producerGroup = producerGroup;
         defaultMQProducerImpl = new DefaultMQProducerImpl(this, rpcHook);
-        //if client open the message trace feature
+        //如果开启了消息轨迹功能，增加对应的RPC钩子方法来追踪消息
         if (enableMsgTrace) {
             try {
                 AsyncTraceDispatcher dispatcher = new AsyncTraceDispatcher(producerGroup, TraceDispatcher.Type.PRODUCE, customizedTraceTopic, rpcHook);
                 dispatcher.setHostProducer(this.defaultMQProducerImpl);
                 traceDispatcher = dispatcher;
+                //发送消息钩子
                 this.defaultMQProducerImpl.registerSendMessageHook(
                     new SendMessageTraceHookImpl(traceDispatcher));
+                //结束事务钩子
                 this.defaultMQProducerImpl.registerEndTransactionHook(
                     new EndTransactionTraceHookImpl(traceDispatcher));
             } catch (Throwable e) {

@@ -590,12 +590,27 @@ public class MQClientInstance {
         }
     }
 
+
+    /**
+     * 更新单个 Topic 路由信息
+     * 若 isDefault=true && defaultMQProducer!=null 时，使用{@link DefaultMQProducer#createTopicKey}
+     *
+     * @param topic             Topic
+     * @param isDefault         是否默认
+     * @param defaultMQProducer producer
+     * @return 是否更新成功
+     */
     public boolean updateTopicRouteInfoFromNameServer(final String topic, boolean isDefault,
         DefaultMQProducer defaultMQProducer) {
         try {
             if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     TopicRouteData topicRouteData;
+                    // 使用默认TopicKey获取TopicRouteData。
+                    // 当broker开启自动创建topic开关时，会使用MixAll.DEFAULT_TOPIC进行创建。
+                    // 当producer的createTopic为MixAll.DEFAULT_TOPIC时，则可以获得TopicRouteData。
+                    // 目的：用于新的topic，发送消息时，未创建路由信息，先使用createTopic的路由信息，等到发送到broker时，进行自动创建。
+                    // @see TopicConfigManager
                     if (isDefault && defaultMQProducer != null) {
                         topicRouteData = this.mQClientAPIImpl.getDefaultTopicRouteInfoFromNameServer(defaultMQProducer.getCreateTopicKey(),
                             clientConfig.getMqClientApiTimeout());
@@ -620,6 +635,8 @@ public class MQClientInstance {
 
                         if (changed) {
 
+                            // 更新 Broker 地址相关信息,当某个Broker心跳超时后,会被从BrokerData的brokerAddrs中移除(由Namesrv定时操作)
+                            // Namesrv存在Slave的BrokerData,所以brokerAddrTable含有Slave的brokerAddr
                             for (BrokerData bd : topicRouteData.getBrokerDatas()) {
                                 this.brokerAddrTable.put(bd.getBrokerName(), bd.getBrokerAddrs());
                             }
@@ -634,6 +651,8 @@ public class MQClientInstance {
 
                             // Update Pub info
                             {
+
+                                // 更新生产者里的TopicPublishInfo,Slave在注册Broker时不会生成QueueData,但会生成BrokerData
                                 TopicPublishInfo publishInfo = topicRouteData2TopicPublishInfo(topic, topicRouteData);
                                 publishInfo.setHaveTopicRouterInfo(true);
                                 for (Entry<String, MQProducerInner> entry : this.producerTable.entrySet()) {
@@ -646,6 +665,7 @@ public class MQClientInstance {
 
                             // Update sub info
                             if (!consumerTable.isEmpty()) {
+                                // 更新订阅者(消费者)里的队列信息,Slave在注册Broker时不会生成QueueData,但会生成BrokerData
                                 Set<MessageQueue> subscribeInfo = topicRouteData2TopicSubscribeInfo(topic, topicRouteData);
                                 for (Entry<String, MQConsumerInner> entry : this.consumerTable.entrySet()) {
                                     MQConsumerInner impl = entry.getValue();
@@ -654,6 +674,7 @@ public class MQClientInstance {
                                     }
                                 }
                             }
+                            // 克隆对象的原因：topicRouteData会被设置到下面的publishInfo/subscribeInfo
                             TopicRouteData cloneTopicRouteData = new TopicRouteData(topicRouteData);
                             log.info("topicRouteTable.put. Topic = {}, TopicRouteData[{}]", topic, cloneTopicRouteData);
                             this.topicRouteTable.put(topic, cloneTopicRouteData);
