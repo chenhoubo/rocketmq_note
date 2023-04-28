@@ -347,13 +347,13 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Send message in synchronous mode. This method returns only when the sending procedure totally completes. </p>
+     * 以同步模式发送消息。只有当发送过程完全完成时，此方法才会返回。 </p>
      *
-     * <strong>Warn:</strong> this method has internal retry-mechanism, that is, internal implementation will retry
-     * {@link #retryTimesWhenSendFailed} times before claiming failure. As a result, multiple messages may be potentially
-     * delivered to broker(s). It's up to the application developers to resolve potential duplication issue.
+     * <strong>Warn:</strong> 该方法具有内部重试机制，即内部实现将重试，
+     * 在声明失败之前｛@link#retryTimesWhenSendFailed｝次。因此，多条消息可能
+     * 交付给经纪人。这取决于应用程序开发人员来解决潜在的重复问题。
      *
-     * @param msg Message to send.
+     * @param msg 要发送的消息。
      * @return {@link SendResult} instance to inform senders details of the deliverable, say Message ID of the message,
      * {@link SendStatus} indicating broker storage/replication status, message queue sent to, etc.
      * @throws MQClientException if there is any client error.
@@ -369,7 +369,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message)} with send timeout specified in addition.
+     * 与｛ @link#send（Message）｝相同，另外指定了发送超时时间。
      *
      * @param msg Message to send.
      * @param timeout send timeout.
@@ -388,13 +388,12 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Send message to broker asynchronously. </p>
+     * 异步发送消息 </p>
      *
-     * This method returns immediately. On sending completion, <code>sendCallback</code> will be executed. </p>
+     * 此方法将立即返回。在发送完成时， <code>sendCallback</code> 将被执行 </p>
      *
-     * Similar to {@link #send(Message)}, internal implementation would potentially retry up to {@link
-     * #retryTimesWhenSendAsyncFailed} times before claiming sending failure, which may yield message duplication and
-     * application developers are the one to resolve this potential issue.
+     * 类似于{@link#send（Message）}，内部实现可能会重试最多{@link #retryTimesWhenSendAsyncFailed} 次，这可能会导致消息重复
+     * 应用程序开发人员是解决这一潜在问题的人。
      *
      * @param msg Message to send.
      * @param sendCallback Callback to execute on sending completed, either successful or unsuccessful.
@@ -410,7 +409,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message, SendCallback)} with send timeout specified in addition.
+     * 与｛@link#send（Message，SendCallback）｝相同，另外指定了发送超时时间。
      *
      * @param msg message to send.
      * @param sendCallback Callback to execute.
@@ -427,8 +426,9 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Similar to <a href="https://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</a>, this method won't wait for
-     * acknowledgement from broker before return. Obviously, it has maximums throughput yet potentials of message loss.
+     * 单向消息
+     * 类似于<a href=“https://en.wikipedia.org/wiki/User_Datagram_Protocol“>UDP</a>，此方法不会等待
+     * 退货前经纪人的确认。显然，它具有最大的吞吐量，但有可能丢失消息。
      *
      * @param msg Message to send.
      * @throws MQClientException if there is any client error.
@@ -442,7 +442,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message)} with target message queue specified in addition.
+     * 与｛@link#send（Message）｝相同，此外还指定了目标消息队列。
      *
      * @param msg Message to send.
      * @param mq Target message queue.
@@ -461,7 +461,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message)} with target message queue and send timeout specified.
+     * 与指定了 目标消息队列 和 发送超时 的{@link#send（Message）}相同。
      *
      * @param msg Message to send.
      * @param mq Target message queue.
@@ -481,7 +481,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message, SendCallback)} with target message queue specified.
+     * 与指定了 目标消息队列 的{@link#send（Message，SendCallback）}相同。
      *
      * @param msg Message to send.
      * @param mq Target message queue.
@@ -498,7 +498,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message, SendCallback)} with target message queue and send timeout specified.
+     * 与指定了 目标消息队列 和 发送超时 的{@link#send（Message，SendCallback）}相同。
      *
      * @param msg Message to send.
      * @param mq Target message queue.
@@ -516,7 +516,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #sendOneway(Message)} with target message queue specified.
+     * 与指定了目标消息队列的{@link#sendOneway（Message）}相同。
      *
      * @param msg Message to send.
      * @param mq Target message queue.
@@ -532,7 +532,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message)} with message queue selector specified.
+     * 与指定了消息队列选择器的{@link#send（Message）}相同。
      *
      * @param msg Message to send.
      * @param selector Message queue selector, through which we get target message queue to deliver message to.
@@ -552,7 +552,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message, MessageQueueSelector, Object)} with send timeout specified.
+     * 与指定了发送超时的{@link#send（Message，MessageQueueSelector，Object）}相同。
      *
      * @param msg Message to send.
      * @param selector Message queue selector, through which we get target message queue to deliver message to.
@@ -573,7 +573,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message, SendCallback)} with message queue selector specified.
+     * 与指定了消息队列选择器的{@link#send（Message，SendCallback）}相同。
      *
      * @param msg Message to send.
      * @param selector Message selector through which to get target message queue.
@@ -591,7 +591,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #send(Message, MessageQueueSelector, Object, SendCallback)} with timeout specified.
+     * 与指定超时的｛@link#send（Message，MessageQueueSelector，Object，SendCallback）｝相同。
      *
      * @param msg Message to send.
      * @param selector Message selector through which to get target message queue.
@@ -610,11 +610,11 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Send request message in synchronous mode. This method returns only when the consumer consume the request message and reply a message. </p>
+     * 以同步模式发送请求消息。只有当使用者使用请求消息并回复消息时，此方法才会返回。 </p>
      *
-     * <strong>Warn:</strong> this method has internal retry-mechanism, that is, internal implementation will retry
-     * {@link #retryTimesWhenSendFailed} times before claiming failure. As a result, multiple messages may be potentially
-     * delivered to broker(s). It's up to the application developers to resolve potential duplication issue.
+     * <strong>Warn:</strong> 该方法具有内部重试机制，即内部实现将重试
+     * 在声明失败之前｛@link#retryTimesWhenSendFailed｝次。因此，多条消息可能
+     * 交付给经纪人。这取决于应用程序开发人员来解决潜在的重复问题。
      *
      * @param msg request message to send
      * @param timeout request timeout
@@ -633,12 +633,11 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Request asynchronously. </p>
-     * This method returns immediately. On receiving reply message, <code>requestCallback</code> will be executed. </p>
+     * 异步请求 </p>
+     * 此方法将立即返回。在接收到回复消息时， <code>requestCallback</code> 将被执行。 </p>
      *
-     * Similar to {@link #request(Message, long)}, internal implementation would potentially retry up to {@link
-     * #retryTimesWhenSendAsyncFailed} times before claiming sending failure, which may yield message duplication and
-     * application developers are the one to resolve this potential issue.
+     * 类似于{@link#request（Message，long）}，在声称发送失败之前，内部实现可能会重试最多{@link #retryTimesWhenSendAsyncFailed}次，
+     * 这可能会导致消息重复和应用程序开发人员是解决这一潜在问题的人。
      *
      * @param msg request message to send
      * @param requestCallback callback to execute on request completion.
@@ -656,7 +655,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #request(Message, long)}  with message queue selector specified.
+     * 与指定了消息队列选择器的{@link#request（Message，long）}相同。
      *
      * @param msg request message to send
      * @param selector message queue selector, through which we get target message queue to deliver message to.
@@ -678,7 +677,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
-     * Same to {@link #request(Message, RequestCallback, long)} with target message selector specified.
+     * 与指定了目标消息选择器的{@link#request（Message，RequestCallback，long）}相同。
      *
      * @param msg requst message to send
      * @param selector message queue selector, through which we get target message queue to deliver message to.
