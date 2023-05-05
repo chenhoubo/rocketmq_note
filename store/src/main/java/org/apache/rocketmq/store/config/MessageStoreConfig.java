@@ -186,10 +186,16 @@ public class MessageStoreConfig {
     @ImportantField
     private String haMasterAddress = null;
     private int haMaxGapNotInSync = 1024 * 1024 * 256;
+
+    //默认：异步复制Master
     @ImportantField
     private volatile BrokerRole brokerRole = BrokerRole.ASYNC_MASTER;
+
+    //默认：异步刷盘
     @ImportantField
     private FlushDiskType flushDiskType = FlushDiskType.ASYNC_FLUSH;
+
+
     // Used by GroupTransferService to sync messages from master to slave
     private int syncFlushTimeout = 1000 * 5;
     // Used by PutMessage to wait messages be flushed to disk and synchronized in current broker member group.

@@ -219,17 +219,23 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     public void start(final boolean startFactory) throws MQClientException {
         switch (this.serviceState) {
+            // 如果状态为 CREATE_JUST，执行启动逻辑。该对象创建时默认状态为 CREATE_JUST
             case CREATE_JUST:
                 this.serviceState = ServiceState.START_FAILED;
 
+                //检查 producerGroup 是否合法
                 this.checkConfig();
 
+                //改变生产者的 instanceName 为进程 ID，避免同一个服务器上的多个生产者实例名相同
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
 
+                //根据 ClientId 获取或创建 MQClientInstance
                 this.mQClientFactory = MQClientManager.getInstance().getOrCreateMQClientInstance(this.defaultMQProducer, rpcHook);
 
+                //向 MQClientInstance 注册服务，将当前生产者加入 MQClientInstance 管理（加入 MQClientInstance.producerTable）
+                //方便后续调用网络请求、进行心跳检测等
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -240,12 +246,15 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
                 this.topicPublishInfoTable.put(this.defaultMQProducer.getCreateTopicKey(), new TopicPublishInfo());
 
+                // 启动 MQClientInstance，如果已经启动，则不会执行
                 if (startFactory) {
                     mQClientFactory.start();
                 }
 
                 log.info("the producer [{}] start OK. sendMessageWithVIPChannel={}", this.defaultMQProducer.getProducerGroup(),
                     this.defaultMQProducer.isSendMessageWithVIPChannel());
+
+                // 设置服务状态为 RUNNING
                 this.serviceState = ServiceState.RUNNING;
                 break;
             case RUNNING:
@@ -259,6 +268,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 break;
         }
 
+        // 启动后马上向 NameServer 发送心跳
         this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
 
         RequestFutureHolder.getInstance().startScheduledTask(this);
@@ -649,10 +659,10 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             int timesTotal = communicationMode == CommunicationMode.SYNC ? 1 + this.defaultMQProducer.getRetryTimesWhenSendFailed() : 1; // 同步3次调用
             int times = 0;// 第几次发送
             String[] brokersSent = new String[timesTotal];// 存储每次发送消息选择的broker名
-            // 循环调用发送消息，直到成功
+            // 循环执行发送，处理同步发送重试。同步发送共重试timesTotal次，默认为2次，异步发送只执行一次
             for (; times < timesTotal; times++) {
                 String lastBrokerName = null == mq ? null : mq.getBrokerName();
-                // 选择消息要发送到的队列,默认策略下,按顺序轮流发送,当一次发送失败时,按顺序选择下一个Broker的MessageQueue
+                // 选择消息要发送到的队列,    默认策略下,按顺序轮流发送,当一次发送失败时,按顺序选择下一个Broker的MessageQueue
                 MessageQueue mqSelected = this.selectOneMessageQueue(topicPublishInfo, lastBrokerName);
                 if (mqSelected != null) {
                     mq = mqSelected;
@@ -672,7 +682,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         // 调用发送消息核心方法
                         sendResult = this.sendKernelImpl(msg, mq, communicationMode, sendCallback, topicPublishInfo, timeout - costTime);
                         endTimestamp = System.currentTimeMillis();
-                        // 更新Broker可用性信息,发送时间超过550ms后会有不可用时长，至少30S,不可用时间只有在开启了延迟容错机制才有效果
+                        // 处理发送异常，更新Broker可用性信息,发送时间超过550ms后会有不可用时长，至少30S,不可用时间只有在开启了延迟容错机制才有效果
                         this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, false);
                         switch (communicationMode) {
                             case ASYNC:
@@ -686,7 +696,6 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                                         continue;
                                     }
                                 }
-
                                 return sendResult;
                             default:
                                 break;
@@ -793,6 +802,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         if (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok()) {
             return topicPublishInfo;
         } else {// 使用 {@link DefaultMQProducer#createTopicKey} 对应的 Topic发布信息。用于 Topic发布信息不存在 && Broker支持自动创建Topic
+            // 如果第一次没有查询到，第二次使用默认主题查询
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);
             topicPublishInfo = this.topicPublishInfoTable.get(topic);
             return topicPublishInfo;
@@ -800,19 +810,21 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     /**
-     * 发送消息核心方法，  并返回发送结果
+     * 消息发送 API 核心入口
+     * 1. 根据 MessageQueue 获取 Broker 地址
+     * 2. 为消息分配全局唯一 ID，执行消息压缩和事务
+     * 3. 如果注册了发送钩子函数，则执行发送之前的钩子函数
+     * 4. 构建消息发送请求包
+     * 5. 根据消息发送方式（同步、异步、单向）进行网络传输
+     * 6. 如果注册了发送钩子函数，执行发送之后的钩子函数
      *
-     * @param msg               消息
-     * @param mq                消息队列
-     * @param communicationMode 通信模式
-     * @param sendCallback      发送回调
-     * @param topicPublishInfo  Topic发布信息
-     * @param timeout           发送消息请求超时时间
-     * @return 发送结果
-     * @throws MQClientException 当Client发生异常
-     * @throws RemotingException 当请求发生异常
-     * @throws MQBrokerException 当Broker发生异常
-     * @throws InterruptedException 当线程被打断
+     * @param msg 待发送消息
+     * @param mq 发送的消息队列
+     * @param communicationMode 消息发送模式：SYNC、ASYNC、ONEWAY
+     * @param sendCallback 异步发送回调函数
+     * @param topicPublishInfo 主题路由信息
+     * @param timeout 消息发送超时时间
+     * @return 消息发送结果
      */
     private SendResult sendKernelImpl(final Message msg,
         final MessageQueue mq,
@@ -822,34 +834,39 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         final long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         long beginStartTime = System.currentTimeMillis();
         String brokerName = this.mQClientFactory.getBrokerNameFromMessageQueue(mq);
-        // 获取 broker的Master IP地址
+        // 根据 brokerName 获取 Broker 的网络地址
         String brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(brokerName);
         if (null == brokerAddr) {
+            // 如果 MQClientInstance 的 brokerAddrTable 未缓存该 Broker 信息，则从 NameServer 主动拉取 topic 路由信息
             tryToFindTopicPublishInfo(mq.getTopic());
             brokerName = this.mQClientFactory.getBrokerNameFromMessageQueue(mq);
             brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(brokerName);
         }
 
         SendMessageContext context = null;
+
+        // 找到 topic 的路由信息
         if (brokerAddr != null) {
             // 是否使用broker vip通道。broker会开启两个端口对外服务,VIP通道的端口是： 原始端口-2
             brokerAddr = MixAll.brokerVIPChannel(this.defaultMQProducer.isSendMessageWithVIPChannel(), brokerAddr);
 
             byte[] prevBody = msg.getBody();// 记录消息内容。下面逻辑可能改变消息内容，例如消息压缩。
             try {
+                // 设置消息的全局唯一 ID（UNIQUE_ID），对于批量消息，在生成过程中已经设置了 ID
                 //for MessageBatch,ID has been set in the generating process
                 if (!(msg instanceof MessageBatch)) {
                     // 设置uniqID,填充入Properties
                     MessageClientIDSetter.setUniqID(msg);
                 }
 
+                // 处理命名空间逻辑
                 boolean topicWithNamespace = false;
                 if (null != this.mQClientFactory.getClientConfig().getNamespace()) {
                     msg.setInstanceId(this.mQClientFactory.getClientConfig().getNamespace());
                     topicWithNamespace = true;
                 }
 
-                // 消息压缩
+                // 消息压缩 ， 消息超过4K自动压缩
                 int sysFlag = 0;
                 boolean msgBodyCompressed = false;
                 if (this.tryToCompressMessage(msg)) {
@@ -858,7 +875,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     msgBodyCompressed = true;
                 }
 
-                // 事务
+                // 处理事务 Prepared 消息，并设置事务标识
                 final String tranMsg = msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);
                 if (Boolean.parseBoolean(tranMsg)) {
                     sysFlag |= MessageSysFlag.TRANSACTION_PREPARED_TYPE;
@@ -877,7 +894,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     this.executeCheckForbiddenHook(checkForbiddenContext);
                 }
 
-                // hook：发送消息前逻辑
+                // 执行消息发送前的钩子函数
                 if (this.hasSendMessageHook()) {
                     context = new SendMessageContext();
                     context.setProducer(this);
@@ -896,6 +913,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     if (msg.getProperty("__STARTDELIVERTIME") != null || msg.getProperty(MessageConst.PROPERTY_DELAY_TIME_LEVEL) != null) {
                         context.setMsgType(MessageType.Delay_Msg);
                     }
+                    // 执行所有 before 钩子函数
                     this.executeSendMessageHookBefore(context);
                 }
 
@@ -973,6 +991,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         break;
                     case ONEWAY:
                     case SYNC:
+                        // 执行客户端同步发送方法
                         long costTimeSync = System.currentTimeMillis() - beginStartTime;
                         if (timeout < costTimeSync) {
                             throw new RemotingTooMuchRequestException("sendKernelImpl call timeout");
@@ -1024,7 +1043,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             }
         }
 
-        // broker为空抛出异常
+        // 主动更新后还是找不到路由信息，则抛出异常
         throw new MQClientException("The broker[" + brokerName + "] not exist", null);
     }
 
@@ -1044,6 +1063,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
         byte[] body = msg.getBody();
         if (body != null) {
+            //消息超过4K自动压缩
             if (body.length >= this.defaultMQProducer.getCompressMsgBodyOverHowmuch()) {
                 try {
                     byte[] data = compressor.compress(body, compressLevel);

@@ -352,6 +352,7 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         this.createTempFile();
+        //添加定时任务
         this.addScheduleTask();
         this.perfs.start();
         this.shutdown = false;
@@ -1563,6 +1564,7 @@ public class DefaultMessageStore implements MessageStore {
 
     private void addScheduleTask() {
 
+        //每10秒 清除过期的 commitLog/ consumerQueue 日志文件
         this.scheduledExecutorService.scheduleAtFixedRate(new AbstractBrokerRunnable(this.getBrokerIdentity()) {
             @Override
             public void run2() {
@@ -1570,6 +1572,7 @@ public class DefaultMessageStore implements MessageStore {
             }
         }, 1000 * 60, this.messageStoreConfig.getCleanResourceInterval(), TimeUnit.MILLISECONDS);
 
+        //每10分钟 检查 commitLog/ consumerQueue 的 MappedFile
         this.scheduledExecutorService.scheduleAtFixedRate(new AbstractBrokerRunnable(this.getBrokerIdentity()) {
             @Override
             public void run2() {
@@ -1577,6 +1580,7 @@ public class DefaultMessageStore implements MessageStore {
             }
         }, 1, 10, TimeUnit.MINUTES);
 
+        //每秒 如果 commitLog 锁时间超过了阈值，持久化它的锁信息
         this.scheduledExecutorService.scheduleAtFixedRate(new AbstractBrokerRunnable(this.getBrokerIdentity()) {
             @Override
             public void run2() {

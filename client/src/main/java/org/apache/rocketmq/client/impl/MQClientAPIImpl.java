@@ -555,7 +555,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         final SendCallback sendCallback,
         final TopicPublishInfo topicPublishInfo,
         final MQClientInstance instance,
-        final int retryTimesWhenSendFailed,
+        final int retryTimesWhenSendFailed,//重试次数
         final SendMessageContext context,
         final DefaultMQProducerImpl producer
     ) throws RemotingException, MQBrokerException, InterruptedException {
@@ -705,6 +705,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         } catch (Exception ex) {
             long cost = System.currentTimeMillis() - beginStartTime;
             producer.updateFaultItem(brokerName, cost, true);
+            //异常是否参加重试
             onExceptionImpl(brokerName, msg, timeoutMillis - cost, request, sendCallback, topicPublishInfo, instance,
                 retryTimesWhenSendFailed, times, ex, context, true, producer);
         }
@@ -724,7 +725,9 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         final boolean needRetry,
         final DefaultMQProducerImpl producer
     ) {
+        //获取增值+1
         int tmp = curTimes.incrementAndGet();
+        //判断重试次数是否已经到了
         if (needRetry && tmp <= timesTotal) {
             String retryBrokerName = brokerName;//by default, it will send to the same broker
             if (topicPublishInfo != null) { //select one message queue accordingly, in order to determine which broker to send
@@ -735,6 +738,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             log.warn("async send msg by retry {} times. topic={}, brokerAddr={}, brokerName={}", tmp, msg.getTopic(), addr,
                 retryBrokerName, e);
             request.setOpaque(RemotingCommand.createNewRequestId());
+            //再次回调sendMessageAsync
             sendMessageAsync(addr, retryBrokerName, msg, timeoutMillis, request, sendCallback, topicPublishInfo, instance,
                 timesTotal, curTimes, context, producer);
         } else {

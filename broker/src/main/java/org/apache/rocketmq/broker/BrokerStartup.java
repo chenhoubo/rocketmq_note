@@ -110,6 +110,7 @@ public class BrokerStartup {
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
                 String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
             nettyServerConfig.setListenPort(10911);
+
             // 创建消息存储配置对象
             final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 
@@ -118,7 +119,7 @@ public class BrokerStartup {
                 messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
             }
 
-            // 构建命令行参数
+            // 构建命令行参数，指定broker的配置文件。在启动脚本中：JAVA_OPT="${JAVA_OPT} -cp ${CLASSPATH}"
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
                 if (file != null) {
@@ -163,6 +164,7 @@ public class BrokerStartup {
             }
 
             if (!brokerConfig.isEnableControllerMode()) {
+                //主从设置
                 switch (messageStoreConfig.getBrokerRole()) {
                     // 若当前的Broker属于同步/异步主结点，则设置id为0（即主结点id为0）
                     case ASYNC_MASTER:
@@ -182,6 +184,7 @@ public class BrokerStartup {
                 }
             }
 
+            // 是否选择 dleger技术 raft:类似于ZK选举，但是性能不好，BUG比较多，推荐不使用。 默认关闭
             if (messageStoreConfig.isEnableDLegerCommitLog()) {
                 brokerConfig.setBrokerId(-1);
             }
@@ -200,7 +203,7 @@ public class BrokerStartup {
             }
             configurator.doConfigure(brokerConfig.getRocketmqHome() + "/conf/logback_broker.xml");
 
-            // 解析启动命令-p参数
+            // 解析启动命令-p参数：打印所有配置项
             if (commandLine.hasOption('p')) {
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig);
@@ -208,7 +211,7 @@ public class BrokerStartup {
                 MixAll.printObjectProperties(console, nettyClientConfig);
                 MixAll.printObjectProperties(console, messageStoreConfig);
                 System.exit(0);
-            } else if (commandLine.hasOption('m')) {// 解析启动命令-m参数
+            } else if (commandLine.hasOption('m')) {// 解析启动命令-m参数：打印所有重要的配置项(BrokerConfig类上面所有标注 @ImportantField 注解的属性)
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig, true);
                 MixAll.printObjectProperties(console, nettyServerConfig, true);
@@ -234,6 +237,7 @@ public class BrokerStartup {
             // 加载配置信息
             controller.getConfiguration().registerConfig(properties);
 
+            //家在配置信息
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();

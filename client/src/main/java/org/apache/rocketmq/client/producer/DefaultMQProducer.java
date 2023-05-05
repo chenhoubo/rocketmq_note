@@ -303,7 +303,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
     
     /**
-     * Start this producer instance. </p>
+     * 启动此生产者实例。 </p>
      *
      * <strong> Much internal initializing procedures are carried out to make this instance prepared, thus, it's a must
      * to invoke this method before sending or querying messages. </strong> </p>

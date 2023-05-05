@@ -161,17 +161,51 @@ public class BrokerController {
     private static final InternalLogger LOG_WATER_MARK = InternalLoggerFactory.getLogger(LoggerName.WATER_MARK_LOGGER_NAME);
     protected static final int HA_ADDRESS_MIN_LENGTH = 6;
 
+//===========================>1.配置分类<===========================
+
+    //整个broker的配置，根据配置信息设置必要的属性，核心的有当前broker的名称，分组，是否master，历史内容的存储位置等
     protected final BrokerConfig brokerConfig;
+
+    //broker作为服务端启动nettyServer的配置
     private final NettyServerConfig nettyServerConfig;
+
+    //broker作为客户端的NettyClient的配置
     private final NettyClientConfig nettyClientConfig;
+
+    //消息存储的核心配置，主要体现消息的存储位置，单个文件大小，内存刷盘频率等事关性能的配置
     protected final MessageStoreConfig messageStoreConfig;
+
+//===========================>2.管理分类<===========================
+
+    //consumer端的消费offset的集中管理，主要的关系就是topic，group，queueid，offset
     protected final ConsumerOffsetManager consumerOffsetManager;
+
+    //consumer的管理和维护，提供consumer的注册，取消，关闭等，主要的关系是group，consumerBroupInfo
     protected final ConsumerManager consumerManager;
+
+    //consumer的过滤管理，针对consumer端的消息过滤，主要关系是topic，consumer，expression
     protected final ConsumerFilterManager consumerFilterManager;
+
     protected final ConsumerOrderInfoManager consumerOrderInfoManager;
+
+    //producer的管理和维护，提供producer的注册，取消，关闭等，主要关系是group，channel，ClientChannelInfo
     protected final ProducerManager producerManager;
+
+    //broker的服务状态管理，实时记录broker的操作性能
+    protected final BrokerStatsManager brokerStatsManager;
+
+    //Topic 配置信息，主要提供根据topic获得对应的topic的配置信息，涉及读写队列数量、操作权限等
+    protected TopicConfigManager topicConfigManager;
+
+    protected final FilterServerManager filterServerManager;
+
+//===========================>3.服务处理分类<===========================
     protected final ScheduleMessageService scheduleMessageService;
+
+    //基于netty的框架实现，主要监听客户端的网络操作，网络的链接、关闭、异常、空闲等事件操作
     protected final ClientHousekeepingService clientHousekeepingService;
+
+    //针对consumer的请求拉取消息的事件处理，基于netty框架，解析并执行内部业务功能，最后将数据返回
     protected final PullMessageProcessor pullMessageProcessor;
     protected final PeekMessageProcessor peekMessageProcessor;
     protected final PopMessageProcessor popMessageProcessor;
@@ -184,18 +218,30 @@ public class BrokerController {
     protected final SendMessageProcessor sendMessageProcessor;
     protected final ReplyMessageProcessor replyMessageProcessor;
     protected final PullRequestHoldService pullRequestHoldService;
+
+    //新消息到达的监听服务，联合PullRequestHostService进行消息到达的通知功能
     protected final MessageArrivingListener messageArrivingListener;
+
+    //broker对请求处理的封装类，处理对应的操作，主要有通知，重置，转换，状态等
     protected final Broker2Client broker2Client;
     protected final SubscriptionGroupManager subscriptionGroupManager;
     protected final ConsumerIdsChangeListener consumerIdsChangeListener;
     protected final EndTransactionProcessor endTransactionProcessor;
     private final RebalanceLockManager rebalanceLockManager = new RebalanceLockManager();
     private final TopicRouteInfoManager topicRouteInfoManager;
+
+    //broker请求外部的封装，主要是通过netty的底层通信完成和namesrv的交互
     protected BrokerOuterAPI brokerOuterAPI;
     protected ScheduledExecutorService scheduledExecutorService;
     protected ScheduledExecutorService syncBrokerMemberGroupExecutorService;
     protected ScheduledExecutorService brokerHeartbeatExecutorService;
+
+//===========================>4.任务队列分类<===========================
+
+    //salve的同步操作，如果broker是slave角色，执行同步操作，主要同步元数据信息
     protected final SlaveSynchronize slaveSynchronize;
+
+    //各种队列，主要是处理发送，拉取，查询等操作，内部是多线程队列机制提高并发处理
     protected final BlockingQueue<Runnable> sendThreadPoolQueue;
     protected final BlockingQueue<Runnable> putThreadPoolQueue;
     protected final BlockingQueue<Runnable> ackThreadPoolQueue;
@@ -209,29 +255,32 @@ public class BrokerController {
     protected final BlockingQueue<Runnable> endTransactionThreadPoolQueue;
     protected final BlockingQueue<Runnable> adminBrokerThreadPoolQueue;
     protected final BlockingQueue<Runnable> loadBalanceThreadPoolQueue;
-    protected final FilterServerManager filterServerManager;
-    protected final BrokerStatsManager brokerStatsManager;
+
     protected final List<SendMessageHook> sendMessageHookList = new ArrayList<SendMessageHook>();
     protected final List<ConsumeMessageHook> consumeMessageHookList = new ArrayList<ConsumeMessageHook>();
+
+    //消息的存储功能，核心及高性能的消息存储
     protected MessageStore messageStore;
     protected RemotingServer remotingServer;
     protected CountDownLatch remotingServerStartLatch;
     protected RemotingServer fastRemotingServer;
-    protected TopicConfigManager topicConfigManager;
+
     protected TopicQueueMappingManager topicQueueMappingManager;
-    protected ExecutorService sendMessageExecutor;
-    protected ExecutorService pullMessageExecutor;
+
+    //各种线程池服务，和队列一一对应关系，执行多线程操作的配置
+    protected ExecutorService sendMessageExecutor;//异步接收 Producer 发送的消息
+    protected ExecutorService pullMessageExecutor;//异步处理 Consumer 拉取消息
     protected ExecutorService litePullMessageExecutor;
     protected ExecutorService putMessageFutureExecutor;
     protected ExecutorService ackMessageExecutor;
-    protected ExecutorService replyMessageExecutor;
-    protected ExecutorService queryMessageExecutor;
-    protected ExecutorService adminBrokerExecutor;
-    protected ExecutorService clientManageExecutor;
-    protected ExecutorService heartbeatExecutor;
-    protected ExecutorService consumerManageExecutor;
+    protected ExecutorService replyMessageExecutor;//异步处理 Consumer 消息重试
+    protected ExecutorService queryMessageExecutor;//异步处理消息查询
+    protected ExecutorService adminBrokerExecutor;//异步处理 Admin 消息
+    protected ExecutorService clientManageExecutor;//异步处理 Client 注销/检查Client配置消息
+    protected ExecutorService heartbeatExecutor;//异步处理 Client 心跳处理
+    protected ExecutorService consumerManageExecutor;//异步处理 Consumer 消息(获取消费列表/查询&修改消费者 offset)
     protected ExecutorService loadBalanceExecutor;
-    protected ExecutorService endTransactionExecutor;
+    protected ExecutorService endTransactionExecutor;//异步处理 MQ 事务消息
     protected boolean updateMasterHAServerAddrPeriodically = false;
     private BrokerStats brokerStats;
     private InetSocketAddress storeHost;
@@ -558,6 +607,7 @@ public class BrokerController {
             }
         }, initialDelay, period, TimeUnit.MILLISECONDS);
 
+        //每5秒 持久化 Consumer 的 offset 到配置文件
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -570,6 +620,7 @@ public class BrokerController {
             }
         }, 1000 * 10, this.brokerConfig.getFlushConsumerOffsetInterval(), TimeUnit.MILLISECONDS);
 
+        //每5秒 持久化 Consumer 的过滤规则到配置文件
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -584,6 +635,7 @@ public class BrokerController {
             }
         }, 1000 * 10, 1000 * 10, TimeUnit.MILLISECONDS);
 
+        //每3分钟 Consumer 失败次数到达阈值剔除 Consumer
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -595,6 +647,7 @@ public class BrokerController {
             }
         }, 3, 3, TimeUnit.MINUTES);
 
+        //每秒 打印内部队列阻塞值
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -606,8 +659,8 @@ public class BrokerController {
             }
         }, 10, 1, TimeUnit.SECONDS);
 
+        //每60秒 获取消息存储在commit log 但是没有保存在 consume queue 的 byte 数
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-
             @Override
             public void run() {
                 try {
@@ -646,6 +699,7 @@ public class BrokerController {
                 }, 1000 * 10, 3 * 1000, TimeUnit.MILLISECONDS);
 
             } else {
+                //每60秒 打印 Broker 主-从 commitlog 之间的差异值
                 this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
                     @Override
@@ -695,6 +749,7 @@ public class BrokerController {
                 }
             }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
         } else if (this.brokerConfig.isFetchNamesrvAddrByAddressServer()) {
+            //每2分钟 更新 Broker 中的 NameServer 地址
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
                 @Override
@@ -952,6 +1007,11 @@ public class BrokerController {
         }
     }
 
+    /**
+     * 创建和注册Broker请求处理类
+     * RocketMQ按照业务逻辑区分请求处理器，每个类型的请求码对应一个业务处理器（NettyRequestProcessor）
+     * 这样就实现了为不同请求码设置对应线程池，实现不同请求线程池的隔离
+     */
     public void registerProcessor() {
         /*
          * SendMessageProcessor
@@ -1426,6 +1486,7 @@ public class BrokerController {
     protected void startBasicService() throws Exception {
 
         if (this.messageStore != null) {
+            //启动消息存储，包括启动 Broker 的高可用 HA(主-从)机制；启动把内存当中的消息刷到磁盘当中去任务；把 commitLog 中的消息分发到 consumerQueue 文件中任务
             this.messageStore.start();
         }
 
@@ -1442,6 +1503,7 @@ public class BrokerController {
         }
 
         if (this.remotingServer != null) {
+            //启动 remotingServer 也就是 RemotingServer，使用 Netty 暴露 Socket 服务处理外部的请求调用
             this.remotingServer.start();
 
             // In test scenarios where it is up to OS to pick up an available port, set the listening port back to config
@@ -1451,6 +1513,7 @@ public class BrokerController {
         }
 
         if (this.fastRemotingServer != null) {
+            //启动 fastRemotingServer 也就是 RemotingServer，使用 Netty 暴露 Socket 服务处理外部的请求调用
             this.fastRemotingServer.start();
         }
 
@@ -1477,26 +1540,32 @@ public class BrokerController {
         }
 
         if (this.fileWatchService != null) {
+            //启动 文件监听服务，处理 SSL 文件变更
             this.fileWatchService.start();
         }
 
         if (this.pullRequestHoldService != null) {
+            //启动 pullRequestHoldService 服务用于处理 Consumer 拉取消息
             this.pullRequestHoldService.start();
         }
 
         if (this.clientHousekeepingService != null) {
+            //启动 clientHousekeepingService 服务用于处理 Producer、Consumer、FilterServer 的存活
             this.clientHousekeepingService.start();
         }
 
         if (this.filterServerManager != null) {
+            //启动 filterServerManager 服务用于定时更新 FilterServer
             this.filterServerManager.start();
         }
 
         if (this.brokerStatsManager != null) {
+            //启动 Broker 中的指标统计
             this.brokerStatsManager.start();
         }
 
         if (this.brokerFastFailure != null) {
+            //启动 Broker 请求列表的过期请求清除任务
             this.brokerFastFailure.start();
         }
 
@@ -1525,17 +1594,20 @@ public class BrokerController {
         }
 
         if (this.brokerOuterAPI != null) {
+            //启动 brokerOuterAPI 也就是 RemotingClient，使得 Broker 可以调用其它方
             this.brokerOuterAPI.start();
         }
 
+        //启动基础服务
         startBasicService();
 
         if (!isIsolated && !this.messageStoreConfig.isEnableDLegerCommitLog() && !this.messageStoreConfig.isDuplicationEnable()) {
             changeSpecialServiceStatus(this.brokerConfig.getBrokerId() == MixAll.MASTER_ID);
+            //注册 Broker 信息到 NameServer。
             this.registerBrokerAll(true, false, true);
         }
 
-        // 等待10s后，每间隔指定时间（自定义向NameServer上报注册信息时间，或者默认60s）向NameServer发送一次心跳请求，上报Broker信息
+        // 等待10s后，每间隔指定时间（自定义向NameServer上报注册信息时间，或者默认60s），上报 Broker、Topic 以及 FilterServer 信息到 NameServer
         scheduledFutures.add(this.scheduledExecutorService.scheduleAtFixedRate(new AbstractBrokerRunnable(this.getBrokerIdentity()) {
             @Override
             public void run2() {

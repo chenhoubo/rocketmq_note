@@ -15,6 +15,7 @@ public class Producer {
     public static void main(String[] args) throws Exception {
         DefaultMQProducer producer = new DefaultMQProducer("group2");
         producer.setNamesrvAddr("localhost:9876");//nameServer地址
+        //启动producer
         producer.start();
 
         //同步消息。
@@ -48,7 +49,7 @@ public class Producer {
 
             //延时消息
             //"1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h"
-            message.setDelayTimeLevel(5);
+            message.setDelayTimeLevel(1);
             SendResult sendResult = producer.send(message);
             System.out.println(sendResult);
         }

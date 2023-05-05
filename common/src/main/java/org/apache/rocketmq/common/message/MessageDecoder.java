@@ -599,7 +599,7 @@ public class MessageDecoder {
         return sb.toString();
     }
 
-    public static Map<String, String> string2messageProperties(final String properties) {
+    public static Map<String, String> string2messageProperties(final String properties) {//properties: UNIQ_KEY7F0000013A9E18B4AAC2181542520000WAITtrueDELAY5TAGS*
         Map<String, String> map = new HashMap<String, String>();
         if (properties != null) {
             int len = properties.length();
@@ -621,6 +621,10 @@ public class MessageDecoder {
             }
         }
 
+        //key:UNIQ_KEY value:7F0000013A9E18B4AAC2181542520000
+        //key:WAIT value:true
+        //key:DELAY value:5
+        //key:TAGS value:*
         return map;
     }
 

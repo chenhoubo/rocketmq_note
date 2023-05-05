@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Consumer filter data manager.Just manage the consumers use expression filter.
+ * 消费者过滤器数据管理器。只需管理消费者使用的表达式过滤器。
  */
 public class ConsumerFilterManager extends ConfigManager {
 

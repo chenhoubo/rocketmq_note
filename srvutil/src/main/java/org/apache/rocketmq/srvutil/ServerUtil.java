@@ -26,13 +26,20 @@ import org.apache.commons.cli.ParseException;
 
 public class ServerUtil {
 
+    /**
+     * 参数：p	打印所有配置项
+     * 参数：c	Broker 的配置文件地址
+     * 参数：h	打印帮助命令
+     * 参数：m	打印所有重要的配置项(BrokerConfig类上面所有标注 @ImportantField 注解的属性)
+     * 参数：n	命名服务地址列表（eg: 192.168.0.1:9876;192.168.0.2:9876）
+     */
     public static Options buildCommandlineOptions(final Options options) {
         Option opt = new Option("h", "help", false, "Print help");
         opt.setRequired(false);
         options.addOption(opt);
 
-        opt =
-            new Option("n", "namesrvAddr", true,
+        //-n参数：命名服务地址列表
+        opt = new Option("n", "namesrvAddr", true,
                 "Name server address list, eg: '192.168.0.1:9876;192.168.0.2:9876'");
         opt.setRequired(false);
         options.addOption(opt);
@@ -47,7 +54,7 @@ public class ServerUtil {
         CommandLine commandLine = null;
         try {
             commandLine = parser.parse(options, args);
-            if (commandLine.hasOption('h')) {
+            if (commandLine.hasOption('h')) {//-h参数：打印帮助命令
                 hf.printHelp(appName, options, true);
                 System.exit(0);
             }

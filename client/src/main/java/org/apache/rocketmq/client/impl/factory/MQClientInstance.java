@@ -96,6 +96,8 @@ public class MQClientInstance {
 
     /**
      * The container of the producer in the current client. The key is the name of producerGroup.
+     *
+     * 注册了 ClientId 和 DefaultMQProducerImpl 的对应关系
      */
     private final ConcurrentMap<String, MQProducerInner> producerTable = new ConcurrentHashMap<>();
 
@@ -113,13 +115,15 @@ public class MQClientInstance {
     private final MQAdminImpl mQAdminImpl;
     private final ConcurrentMap<String/* Topic */, TopicRouteData> topicRouteTable = new ConcurrentHashMap<>();
     private final ConcurrentMap<String/* Topic */, ConcurrentMap<MessageQueue, String/*brokerName*/>> topicEndPointsTable = new ConcurrentHashMap<>();
+    // 调用无参构造，生成 “不公平锁”
     private final Lock lockNamesrv = new ReentrantLock();
     private final Lock lockHeartbeat = new ReentrantLock();
 
     /**
-     * The container which stores the brokerClusterInfo. The key of the map is the brokerCluster name.
-     * And the value is the broker instance list that belongs to the broker cluster.
-     * For the sub map, the key is the id of single broker instance, and the value is the address.
+     *
+     * 译文：存储brokerClusterInfo的容器。映射的密钥是brokerCluster名称。
+     * 该值是属于代理集群的代理实例列表。
+     * 对于子映射，键是单个代理实例的id，值是地址。
      */
     private final ConcurrentMap<String, HashMap<Long, String>> brokerAddrTable = new ConcurrentHashMap<>();
 
@@ -266,6 +270,7 @@ public class MQClientInstance {
                     // Start rebalance service
                     this.rebalanceService.start();
                     // Start push service
+                    // 当消费失败的时候，需要把消息发回去
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
                     log.info("the client factory [{}] start OK", this.clientId);
                     this.serviceState = ServiceState.RUNNING;
@@ -278,6 +283,9 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 启动定时任务
+     */
     private void startScheduledTask() {
         if (null == this.clientConfig.getNamesrvAddr()) {
             this.scheduledExecutorService.scheduleAtFixedRate(() -> {
@@ -289,6 +297,10 @@ public class MQClientInstance {
             }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
         }
 
+        /**
+         * 默认每30s从nameserver获取Topic路由信息
+         * 包括 生产者和消费者
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.updateTopicRouteInfoFromNameServer();
@@ -297,6 +309,11 @@ public class MQClientInstance {
             }
         }, 10, this.clientConfig.getPollNameServerInterval(), TimeUnit.MILLISECONDS);
 
+        /**
+         * 每30s向Broker端发送心跳
+         * 1. 清除离线的Broker
+         * 2. 汇报心跳给broker
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.cleanOfflineBroker();
@@ -306,6 +323,9 @@ public class MQClientInstance {
             }
         }, 1000, this.clientConfig.getHeartbeatBrokerInterval(), TimeUnit.MILLISECONDS);
 
+        /**
+         * 每5s把消费者的offset持久化
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.persistAllConsumerOffset();
@@ -314,6 +334,9 @@ public class MQClientInstance {
             }
         }, 1000 * 10, this.clientConfig.getPersistConsumerOffsetInterval(), TimeUnit.MILLISECONDS);
 
+        /**
+         * 每60s调整线程池
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.adjustThreadPool();
@@ -398,6 +421,7 @@ public class MQClientInstance {
                         while (it.hasNext()) {
                             Entry<Long, String> ee = it.next();
                             String addr = ee.getValue();
+                            //判断是否存在，不存在久移除
                             if (!this.isBrokerAddrExistInTopicRouteTable(addr)) {
                                 it.remove();
                                 log.info("the broker addr[{} {}] is offline, remove it", brokerName, addr);
@@ -413,6 +437,7 @@ public class MQClientInstance {
                     }
 
                     if (!updatedTable.isEmpty()) {
+                        //重新更新可用的broker
                         this.brokerAddrTable.putAll(updatedTable);
                     }
                 } finally {
@@ -603,6 +628,7 @@ public class MQClientInstance {
     public boolean updateTopicRouteInfoFromNameServer(final String topic, boolean isDefault,
         DefaultMQProducer defaultMQProducer) {
         try {
+            //获取锁
             if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     TopicRouteData topicRouteData;

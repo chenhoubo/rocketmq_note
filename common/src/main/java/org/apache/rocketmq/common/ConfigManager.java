@@ -78,6 +78,7 @@ public abstract class ConfigManager {
         this.persist();
     }
 
+    //持久化 Consumer 到配置文件
     public synchronized void persist() {
         String jsonString = this.encode(true);
         if (jsonString != null) {

@@ -46,6 +46,8 @@ public class BrokerConfig extends BrokerIdentity {
 
     private int brokerPermission = PermName.PERM_READ | PermName.PERM_WRITE;
     private int defaultTopicQueueNums = 8;
+
+    //默认自动创建主题
     @ImportantField
     private boolean autoCreateTopicEnable = true;
 
@@ -297,6 +299,7 @@ public class BrokerConfig extends BrokerIdentity {
 
     /**
      * Is startup controller mode, which support auto switch broker's role.
+     * 启动控制器模式，支持自动切换代理的角色。默认关闭
      */
     private boolean enableControllerMode = false;
 

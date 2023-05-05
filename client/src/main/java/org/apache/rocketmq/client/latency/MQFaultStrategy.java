@@ -65,17 +65,20 @@ public class MQFaultStrategy {
      * @return 消息队列
      */
     public MessageQueue selectOneMessageQueue(final TopicPublishInfo tpInfo, final String lastBrokerName) {
-        if (this.sendLatencyFaultEnable) {//如果开启了延迟容错机制，默认未开启
+        // 启用 Broker 故障延迟机制，默认未开启
+        if (this.sendLatencyFaultEnable) {
             try {
                 //循环所有MessageQueue
                 // 当 lastBrokerName == null 时，获取第一个可用的MessageQueue
                 // 当 lastBrokerName != null 时, 获取 brokerName=lastBrokerName && 可用的MessageQueue
                 int index = tpInfo.getSendWhichQueue().incrementAndGet();
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
+                    //绝对值 取 余
                     int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();
                     if (pos < 0)
                         pos = 0;
                     MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
+                    //判断mq是否有效
                     if (latencyFaultTolerance.isAvailable(mq.getBrokerName()))
                         return mq;
                 }
@@ -101,7 +104,7 @@ public class MQFaultStrategy {
             return tpInfo.selectOneMessageQueue();
         }
 
-        // 默认情况下,获得 lastBrokerName 对应的一个消息队列，不考虑该队列的可用性
+        // 默认情况下,不启用 Broker 故障延迟机制，获得 lastBrokerName 对应的一个消息队列，不考虑该队列的可用性
         return tpInfo.selectOneMessageQueue(lastBrokerName);
     }
 

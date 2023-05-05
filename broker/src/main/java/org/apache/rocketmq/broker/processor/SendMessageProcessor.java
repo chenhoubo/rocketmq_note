@@ -214,6 +214,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         final TopicQueueMappingContext mappingContext,
         final SendMessageCallback sendMessageCallback) throws RemotingCommandException {
 
+        // 构造Response，包含消息合法性检查
         final RemotingCommand response = preSend(ctx, request, requestHeader);
         if (response.getCode() != -1) {
             return response;
@@ -232,13 +233,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             queueIdInt = randomQueueId(topicConfig.getWriteQueueNums());
         }
 
-        //构造broker内部使用的Message（包装一层）
+        // 构造存储用的Message对象
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setTopic(requestHeader.getTopic());//主题
         msgInner.setQueueId(queueIdInt);//queueId
 
         Map<String, String> oriProps = MessageDecoder.string2messageProperties(requestHeader.getProperties());
-        //死信消息的处理逻辑---如果是消费重试次数达到上限，就会进入死信队列
+        // 判断发过来的消息是否已经到达重新消费的重试最大次数，进入死信队列
         if (!handleRetryAndDLQ(requestHeader, response, request, msgInner, topicConfig, oriProps)) {
             return response;
         }
@@ -301,9 +302,10 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 }
                 sendMessageCallback.onComplete(sendMessageContext, response);
             }, this.brokerController.getPutMessageFutureExecutor());
-            // Returns null to release the send message thread
+            // 返回null以释放发送消息线程
             return null;
         } else {
+            // 保存到消息存储
             PutMessageResult putMessageResult = null;
             if (sendTransactionPrepareMessage) {
                 putMessageResult = this.brokerController.getTransactionalMessageService().prepareMessage(msgInner);

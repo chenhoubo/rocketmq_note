@@ -81,6 +81,9 @@ public class NamespaceUtil {
         return resourceWithNamespace;
     }
 
+    /**
+     * 包装命名空间
+     */
     public static String wrapNamespace(String namespace, String resourceWithOutNamespace) {
         if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resourceWithOutNamespace)) {
             return resourceWithOutNamespace;
@@ -105,6 +108,9 @@ public class NamespaceUtil {
 
     }
 
+    /**
+     * 是否已准备好命名空间。
+     */
     public static boolean isAlreadyWithNamespace(String resource, String namespace) {
         if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resource) || isSystemResource(resource)) {
             return false;

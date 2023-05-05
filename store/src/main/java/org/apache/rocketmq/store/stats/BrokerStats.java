@@ -38,6 +38,7 @@ public class BrokerStats {
         this.defaultMessageStore = defaultMessageStore;
     }
 
+    //打印昨日消息接收与消费总数
     public void record() {
         this.msgPutTotalYesterdayMorning = this.msgPutTotalTodayMorning;
         this.msgGetTotalYesterdayMorning = this.msgGetTotalTodayMorning;
