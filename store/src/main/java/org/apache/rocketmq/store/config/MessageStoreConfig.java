@@ -114,6 +114,7 @@ public class MessageStoreConfig {
 
     /**
      * introduced since 4.0.x. Determine whether to use mutex reentrantLock when putting message.<br/>
+     * 从4.0.x开始引入。确定在放置消息时是否使用互斥重入锁。
      */
     private boolean useReentrantLockWhenPutMessage = true;
 
@@ -197,6 +198,7 @@ public class MessageStoreConfig {
 
 
     // Used by GroupTransferService to sync messages from master to slave
+    //GroupTransferService用于将消息从主服务器同步到从服务器
     private int syncFlushTimeout = 1000 * 5;
     // Used by PutMessage to wait messages be flushed to disk and synchronized in current broker member group.
     private int putMessageTimeout = 1000 * 8;
@@ -887,6 +889,7 @@ public class MessageStoreConfig {
      * @return <tt>true</tt> or <tt>false</tt>
      */
     public boolean isTransientStorePoolEnable() {
+        //todo 开启堆外内存缓冲区，必须是主节点
         return transientStorePoolEnable && BrokerRole.SLAVE != getBrokerRole();
     }
 

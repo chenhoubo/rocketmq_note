@@ -106,9 +106,14 @@ public class BrokerStartup {
             // 创建netty客户端配置对象，用于发送请求
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
 
-            // 监听端口10911
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
-                String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
+                    String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING)
+            )));
+            // 监听端口10911
+            //remotingServer：监听listenPort配置项指定的监听端口，作用如下：
+            //producer发送的消息
+            //conumser在消费失败或者消费超时发送的消息
+            //consumer拉取消息
             nettyServerConfig.setListenPort(10911);
 
             // 创建消息存储配置对象
@@ -189,6 +194,8 @@ public class BrokerStartup {
                 brokerConfig.setBrokerId(-1);
             }
 
+            //监听端口（10911）+1 = 10912
+            //主broker用于监听从broker请求的监听端口，用于Broker的主从同步
             messageStoreConfig.setHaListenPort(nettyServerConfig.getListenPort() + 1);
             LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
             JoranConfigurator configurator = new JoranConfigurator();
@@ -228,22 +235,23 @@ public class BrokerStartup {
 
             brokerConfig.setInBrokerContainer(false);
 
+            // 3.创建 BrokerController
             final BrokerController controller = new BrokerController(
                 brokerConfig,
                 nettyServerConfig,
                 nettyClientConfig,
                 messageStoreConfig);
-            // remember all configs to prevent discard
-            // 加载配置信息
+            // remember all configs to prevent discard 加载配置信息
             controller.getConfiguration().registerConfig(properties);
 
-            //家在配置信息
+            //4. 初始化 BrokerController
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();
                 System.exit(-3);
             }
 
+            //jvm关闭的勾子函数
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 private volatile boolean hasShutdown = false;
                 private AtomicInteger shutdownTimes = new AtomicInteger(0);

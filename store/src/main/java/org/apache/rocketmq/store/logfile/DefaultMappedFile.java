@@ -211,9 +211,13 @@ public class DefaultMappedFile extends AbstractMappedFile {
         assert messageExt != null;
         assert cb != null;
 
+        //当前这个MaapedFile的写入位置
         int currentPos = WROTE_POSITION_UPDATER.get(this);
 
         if (currentPos < this.fileSize) {
+            //异步输盘时还有两种刷盘模式可以选择
+            //TODO 如果writeBuffer!= null开启了堆外内存缓冲，使用writeBuffer,否则使用mappedByteBuffer（也是继承的ByteBuffer）
+            //slice方法创建一个新的字节缓冲区
             ByteBuffer byteBuffer = appendMessageBuffer().slice();
             byteBuffer.position(currentPos);
             AppendMessageResult result;
@@ -223,6 +227,8 @@ public class DefaultMappedFile extends AbstractMappedFile {
                         (MessageExtBatch) messageExt, putMessageContext);
             } else if (messageExt instanceof MessageExtBrokerInner) {
                 // traditional single message or newly introduced inner-batch message
+                //todo 非批量处理
+                //写入具体的数据 commitlog中的数据格式
                 result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos,
                         (MessageExtBrokerInner) messageExt, putMessageContext);
             } else {

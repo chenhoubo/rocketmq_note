@@ -315,6 +315,7 @@ public class DefaultMessageStore implements MessageStore {
             this.haService.init(this);
         }
 
+        //开启堆外内存缓冲区，默认关闭
         if (messageStoreConfig.isTransientStorePoolEnable()) {
             this.transientStorePool.init();
         }
@@ -2458,16 +2459,19 @@ public class DefaultMessageStore implements MessageStore {
                     this.reputFromOffset, DefaultMessageStore.this.commitLog.getMinOffset());
                 this.reputFromOffset = DefaultMessageStore.this.commitLog.getMinOffset();
             }
+            //循环读取每一条消息
             for (boolean doNext = true; this.isCommitLogAvailable() && doNext; ) {
 
+                //读取结果
                 SelectMappedBufferResult result = DefaultMessageStore.this.commitLog.getData(reputFromOffset);
                 if (result != null) {
                     try {
                         this.reputFromOffset = result.getStartOffset();
 
                         for (int readSize = 0; readSize < result.getSize() && reputFromOffset < DefaultMessageStore.this.getConfirmOffset() && doNext; ) {
-                            DispatchRequest dispatchRequest =
-                                DefaultMessageStore.this.commitLog.checkMessageAndReturnSize(result.getByteBuffer(), false, false, false);
+                            //创建DispatchRequest对象
+                            DispatchRequest dispatchRequest = DefaultMessageStore.this.commitLog.checkMessageAndReturnSize(
+                                    result.getByteBuffer(), false, false, false);
                             int size = dispatchRequest.getBufferSize() == -1 ? dispatchRequest.getMsgSize() : dispatchRequest.getBufferSize();
 
                             if (reputFromOffset + size > DefaultMessageStore.this.getConfirmOffset()) {
@@ -2477,6 +2481,8 @@ public class DefaultMessageStore implements MessageStore {
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
+                                    //如果消息长度大于0，则调用doDispatch方法
+                                    //todo  跳转到 CommitLogDispatcherBuildConsumeQueue.dispatch()方法
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
                                     if (DefaultMessageStore.this.brokerConfig.isLongPollingEnable()

@@ -465,6 +465,9 @@ public class BrokerController {
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
         NettyServerConfig fastConfig = (NettyServerConfig) this.nettyServerConfig.clone();
 
+        //fastRemotingServer使用的监听端口，监听端口值listenPort-2，即默认为10909
+        //与remotingServer相似，但是不包含处理拉取消息的请求。在vipChannelEnabled开启时，producer，consumer发送消息才发送到fastRemotingServer
+        //在RocketMQ 4.5.1之后，10909端口vipChannelEnabled默认为了false
         int listeningPort = nettyServerConfig.getListenPort() - 2;
         if (listeningPort < 0) {
             listeningPort = 0;
@@ -481,6 +484,7 @@ public class BrokerController {
         this.scheduledExecutorService = new ScheduledThreadPoolExecutor(1,
             new ThreadFactoryImpl("BrokerControllerScheduledThread", true, getBrokerIdentity()));
 
+        //发送消息的线程池
         this.sendMessageExecutor = new BrokerFixedThreadPoolExecutor(
             this.brokerConfig.getSendMessageThreadPoolNums(),
             this.brokerConfig.getSendMessageThreadPoolNums(),
@@ -489,6 +493,7 @@ public class BrokerController {
             this.sendThreadPoolQueue,
             new ThreadFactoryImpl("SendMessageThread_", getBrokerIdentity()));
 
+        //pull消息的线程池
         this.pullMessageExecutor = new BrokerFixedThreadPoolExecutor(
             this.brokerConfig.getPullMessageThreadPoolNums(),
             this.brokerConfig.getPullMessageThreadPoolNums(),
@@ -521,6 +526,7 @@ public class BrokerController {
             this.ackThreadPoolQueue,
             new ThreadFactoryImpl("AckMessageThread_", getBrokerIdentity()));
 
+        //查询线程池
         this.queryMessageExecutor = new BrokerFixedThreadPoolExecutor(
             this.brokerConfig.getQueryMessageThreadPoolNums(),
             this.brokerConfig.getQueryMessageThreadPoolNums(),
@@ -545,6 +551,7 @@ public class BrokerController {
             this.clientManagerThreadPoolQueue,
             new ThreadFactoryImpl("ClientManageThread_", getBrokerIdentity()));
 
+        //心跳处理的线程池
         this.heartbeatExecutor = new BrokerFixedThreadPoolExecutor(
             this.brokerConfig.getHeartbeatThreadPoolNums(),
             this.brokerConfig.getHeartbeatThreadPoolNums(),
@@ -561,6 +568,7 @@ public class BrokerController {
             this.consumerManagerThreadPoolQueue,
             new ThreadFactoryImpl("ConsumerManageThread_", true, getBrokerIdentity()));
 
+        //应答线程池
         this.replyMessageExecutor = new BrokerFixedThreadPoolExecutor(
             this.brokerConfig.getProcessReplyMessageThreadPoolNums(),
             this.brokerConfig.getProcessReplyMessageThreadPoolNums(),
@@ -766,27 +774,30 @@ public class BrokerController {
 
     public boolean initialize() throws CloneNotSupportedException {
 
-        // 加载topic配置管理器
+        //1. 加载 config 信息
+        // todo 加载topic配置管理器
         boolean result = this.topicConfigManager.load();
         result = result && this.topicQueueMappingManager.load();
-        // 加载消费偏移量管理器
+        // todo 加载消费偏移量管理器
         result = result && this.consumerOffsetManager.load();
-        // 加载订阅组管理器
+        // todo 加载订阅组管理器
         result = result && this.subscriptionGroupManager.load();
-        // 加载消费过滤管理器
+        // todo 加载消费过滤管理器
         result = result && this.consumerFilterManager.load();
         result = result && this.consumerOrderInfoManager.load();
 
         if (result) {
             try {
-                //初始化MessageStore，将消息和映射文件加载到内存中
+                //2. 创建消息存储管理组件 ， 初始化MessageStore，将消息和映射文件加载到内存中
                 DefaultMessageStore defaultMessageStore = new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener, this.brokerConfig);
                 defaultMessageStore.setTopicConfigTable(topicConfigManager.getTopicConfigTable());
 
+                //如果开启了多副本机制，会为集群节点选主器添加roleChangeHandler事件处理器，即节点发送变更后的事件处理器。
                 if (messageStoreConfig.isEnableDLegerCommitLog()) {
                     DLedgerRoleChangeHandler roleChangeHandler = new DLedgerRoleChangeHandler(this, defaultMessageStore);
                     ((DLedgerCommitLog) defaultMessageStore.getCommitLog()).getdLedgerServer().getdLedgerLeaderElector().addRoleChangeHandler(roleChangeHandler);
                 }
+                //broker的统计组件
                 this.brokerStats = new BrokerStats(defaultMessageStore);
                 //load plugin
                 MessageStorePluginContext context = new MessageStorePluginContext(this, messageStoreConfig, brokerStatsManager, messageArrivingListener);
@@ -811,6 +822,7 @@ public class BrokerController {
             registerMessageStoreHook();
         }
 
+        //3. 存储组件启动（包含零拷贝MMAP技术）
         result = result && this.messageStore.load();
 
         if (messageStoreConfig.isTimerWheelEnable()) {
@@ -831,16 +843,16 @@ public class BrokerController {
             //初始化2个NettyServer，分别监听端口8886和8888
             initializeRemotingServer();
 
-            //初始化执行器，为注册请求处理器做准备
+            //4. 初始化执行器，为注册请求处理器做准备
             initializeResources();
 
-            //注册请求处理器
+            //5. 注册各种处理消息请求（功能号设计）
             registerProcessor();
 
-            //开启一系列的单线程提供持久化和监听服务
+            //6.开启一系列的单线程提供持久化和监听服务
             initializeScheduledTasks();
 
-            //初始化事务、ACL和钩子函数服务
+            //7.初始化事务、ACL和钩子函数服务
             initialTransaction();
 
             initialAcl();
@@ -1486,7 +1498,9 @@ public class BrokerController {
     protected void startBasicService() throws Exception {
 
         if (this.messageStore != null) {
-            //启动消息存储，包括启动 Broker 的高可用 HA(主-从)机制；启动把内存当中的消息刷到磁盘当中去任务；把 commitLog 中的消息分发到 consumerQueue 文件中任务
+            //启动消息存储，包括启动 Broker 的高可用 HA(主-从)机制；
+            // 启动把内存当中的消息刷到磁盘当中去任务；
+            // 把 commitLog 中的消息分发到 consumerQueue 文件中任务
             this.messageStore.start();
         }
 

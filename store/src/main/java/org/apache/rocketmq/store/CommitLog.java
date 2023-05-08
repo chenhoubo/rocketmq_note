@@ -774,6 +774,7 @@ public class CommitLog implements Swappable {
         }
     }
 
+    //异步向commitlog中写入数据
     public CompletableFuture<PutMessageResult> asyncPutMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
         //Message存储到Broker的时间
@@ -782,7 +783,7 @@ public class CommitLog implements Swappable {
         }
 
         // Set the message body CRC (consider the most appropriate setting on the client)
-        //Message Body的crc校验码，房子消息内存容易被篡改和破坏
+        //Message Body的crc校验码，防止消息内存容易被篡改和破坏
         msg.setBodyCRC(UtilAll.crc32(msg.getBody()));
         // Back to Results
         AppendMessageResult result = null;
@@ -806,7 +807,7 @@ public class CommitLog implements Swappable {
         String topicQueueKey = generateKey(putMessageThreadLocal.getKeyBuilder(), msg);
         long elapsedTimeInLock = 0;
         MappedFile unlockMappedFile = null;
-        //获取最近的一个CommitLog文件的内容映射文件（零拷贝）
+        //获取最后的一个CommitLog文件的内容映射文件（零拷贝）
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
         long currOffset;
@@ -857,7 +858,7 @@ public class CommitLog implements Swappable {
             PutMessageContext putMessageContext = new PutMessageContext(topicQueueKey);
 
             //putMessageLock会有多个线程并行处理，需要上锁，可以在broker中配置是可重入锁还是自旋锁（useReentrantLock）
-            //默认是false，使用自旋锁，异步刷盘建议使用自旋锁，同步刷盘建议使用重入锁
+            //默认是true，使用重入锁，异步刷盘建议使用自旋锁，同步刷盘建议使用重入锁
             putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
             try {
                 long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -871,6 +872,7 @@ public class CommitLog implements Swappable {
                 }
 
                 //最近的CommitLog文件写满了，再创建一个新的。
+                //org.apache.rocketmq.store.MappedFileQueue#getLastMappedFile(long)
                 if (null == mappedFile || mappedFile.isFull()) {
                     mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
                 }
@@ -897,6 +899,7 @@ public class CommitLog implements Swappable {
                             beginTimeInLock = 0;
                             return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, result));
                         }
+                        //消息写入
                         result = mappedFile.appendMessage(msg, this.appendMessageCallback, putMessageContext);
                         if (AppendMessageStatus.PUT_OK.equals(result.getStatus())) {
                             onCommitLogAppend(msg, result, mappedFile);

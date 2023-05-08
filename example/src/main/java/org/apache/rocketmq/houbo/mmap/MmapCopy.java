@@ -18,9 +18,11 @@ public class MmapCopy {
     public static void main(String[] args) throws Exception {
         //映射的文件
         File file1 = new File(path,"00000000000000000000");
-        //映射文件的fileChannel对象（操作文件）
+        //映射文件的fileChannel对象（文件通道）
         FileChannel fileChannel = new RandomAccessFile(file1, "rw").getChannel();
-        //fileChannel定义了map方法，MMAP的映射
+        //MappedByteBuffer （零拷贝之内存映射：mmap）
+        //FileChannel配合着ByteBuffer，将读写的数据缓存到内存中(操纵大文件时可以显著提高效率)
+        //fileChannel定义了map方法，MMAP的映射，它可以把一个文件从 position 位置开始的 size 大小的区域映射为内存映像文件
         MappedByteBuffer mmap = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, 1024);
         //向mmap put方法，模拟MQ写入数据
         mmap.put("chen".getBytes());
