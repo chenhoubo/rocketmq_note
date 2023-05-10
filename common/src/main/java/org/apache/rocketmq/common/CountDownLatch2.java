@@ -65,7 +65,10 @@ public class CountDownLatch2 {
      *
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
+    // 除非当前线程中断，否则使当前线程处于休眠状态直到闭锁的计数减少到0
+    // 如果当前计数为0时，该方法会立即返回
     public void await() throws InterruptedException {
+        // 以共享锁的模式竞争锁，线程被中断时抛出异常
         sync.acquireSharedInterruptibly(1);
     }
 
@@ -111,6 +114,7 @@ public class CountDownLatch2 {
      */
     public boolean await(long timeout, TimeUnit unit)
         throws InterruptedException {
+        // 以共享锁的模式竞争锁，线程被中断或超时时抛出异常
         return sync.tryAcquireSharedNanos(1, unit.toNanos(timeout));
     }
 

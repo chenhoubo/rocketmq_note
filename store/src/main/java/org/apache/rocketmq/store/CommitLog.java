@@ -69,6 +69,7 @@ public class CommitLog implements Swappable {
     protected final MappedFileQueue mappedFileQueue;
     protected final DefaultMessageStore defaultMessageStore;
 
+    //数据落地磁盘的管理，主要分为两类：实时数据刷盘(FlushRealTimeService),以及异步刷盘(GroupCommitService)
     private final FlushManager flushManager;
 
     private final AppendMessageCallback appendMessageCallback;
@@ -84,6 +85,7 @@ public class CommitLog implements Swappable {
 
     private volatile Set<String> fullStorePaths = Collections.emptySet();
 
+    //刷盘观察者，处理队列中的刷盘请求，对于规定时间内没有刷盘成功的进行处理。
     private final FlushDiskWatcher flushDiskWatcher;
 
     protected int commitLogSize;
@@ -838,6 +840,7 @@ public class CommitLog implements Swappable {
             }
         }
 
+        //重入锁
         topicQueueLock.lock(topicQueueKey);
         try {
 
@@ -1116,16 +1119,20 @@ public class CommitLog implements Swappable {
         return true;
     }
 
+    //tag： 在发送消息过程中同步刷盘场景中需要将消息写入到磁盘中，同时还需要在集群内同步，只有这两个操作都成功才表示消息发送成功！
     private CompletableFuture<PutMessageResult> handleDiskFlushAndHA(PutMessageResult putMessageResult,
         MessageExt messageExt, int needAckNums, boolean needHandleHA) {
+        //数据刷盘
         CompletableFuture<PutMessageStatus> flushResultFuture = handleDiskFlush(putMessageResult.getAppendMessageResult(), messageExt);
         CompletableFuture<PutMessageStatus> replicaResultFuture;
+        //同步
         if (!needHandleHA) {
             replicaResultFuture = CompletableFuture.completedFuture(PutMessageStatus.PUT_OK);
         } else {
             replicaResultFuture = handleHA(putMessageResult.getAppendMessageResult(), putMessageResult, needAckNums);
         }
 
+        //刷盘和同步任务的结果作为第三个任务的输入，构建新的响应
         return flushResultFuture.thenCombine(replicaResultFuture, (flushStatus, replicaStatus) -> {
             if (flushStatus != PutMessageStatus.PUT_OK) {
                 putMessageResult.setPutMessageStatus(flushStatus);
@@ -1319,6 +1326,7 @@ public class CommitLog implements Swappable {
             }
 
             boolean result = false;
+            //正常推出，确保所有的数据都刷盘
             for (int i = 0; i < RETRY_TIMES_OVER && !result; i++) {
                 result = CommitLog.this.mappedFileQueue.commit(0);
                 CommitLog.log.info(this.getServiceName() + " service shutdown, retry " + (i + 1) + " times " + (result ? "OK" : "Not OK"));
@@ -1336,11 +1344,15 @@ public class CommitLog implements Swappable {
             CommitLog.log.info(this.getServiceName() + " service started");
 
             while (!this.isStopped()) {
+                //休眠策略，true调用Threa#sleep，false调用FlushRealTimeService#waitForRunning，默认为true
                 boolean flushCommitLogTimed = CommitLog.this.defaultMessageStore.getMessageStoreConfig().isFlushCommitLogTimed();
 
+                //刷盘周期，默认值500ms
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushIntervalCommitLog();
+                //刷盘页数，默认4页，每页大小4k
                 int flushPhysicQueueLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogLeastPages();
 
+                //两次刷盘的最大间隔
                 int flushPhysicQueueThoroughInterval =
                     CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushCommitLogThoroughInterval();
 
@@ -1348,8 +1360,10 @@ public class CommitLog implements Swappable {
 
                 // Print flush progress
                 long currentTimeMillis = System.currentTimeMillis();
+                //判断是否刷盘间隔已经超过了两次刷盘的最大间隔
                 if (currentTimeMillis >= (this.lastFlushTimestamp + flushPhysicQueueThoroughInterval)) {
                     this.lastFlushTimestamp = currentTimeMillis;
+                    //超过了设置0，表示内存的中的数据全部刷到了磁盘文件中
                     flushPhysicQueueLeastPages = 0;
                     printFlushProgress = (printTimes++ % 10) == 0;
                 }
@@ -1366,6 +1380,7 @@ public class CommitLog implements Swappable {
                     }
 
                     long begin = System.currentTimeMillis();
+                    //刷盘操作
                     CommitLog.this.mappedFileQueue.flush(flushPhysicQueueLeastPages);
                     long storeTimestamp = CommitLog.this.mappedFileQueue.getStoreTimestamp();
                     if (storeTimestamp > 0) {
@@ -1462,11 +1477,11 @@ public class CommitLog implements Swappable {
         public synchronized void putRequest(final GroupCommitRequest request) {
             lock.lock();
             try {
-                this.requestsWrite.add(request);
+                this.requestsWrite.add(request);// 写入请求
             } finally {
                 lock.unlock();
             }
-            this.wakeup();
+            this.wakeup();// 唤醒GroupCommitRequest线程处理数据
         }
 
         private void swapRequests() {
@@ -1513,7 +1528,7 @@ public class CommitLog implements Swappable {
             while (!this.isStopped()) {
                 try {
                     this.waitForRunning(10);
-                    this.doCommit();
+                    this.doCommit();//执行doCommit方法
                 } catch (Exception e) {
                     CommitLog.log.warn(this.getServiceName() + " service has exception. ", e);
                 }
@@ -1676,6 +1691,11 @@ public class CommitLog implements Swappable {
             this.msgStoreItemMemory = ByteBuffer.allocate(END_FILE_MIN_BLANK_LENGTH);
         }
 
+
+        /**
+         * // 只是将消息追加到内存中
+         * @param fileFromOffset 文件的第一个偏移量（就是MappedFile是从哪个地方开始的）
+         */
         public AppendMessageResult doAppend(final long fileFromOffset, final ByteBuffer byteBuffer, final int maxBlank,
             final MessageExtBrokerInner msgInner, PutMessageContext putMessageContext) {
             // STORETIMESTAMP + STOREHOSTADDRESS + OFFSET <br>
@@ -1694,6 +1714,7 @@ public class CommitLog implements Swappable {
             };
 
             // Record ConsumeQueue information
+            // 获取该消息在消息队列的物理偏移量
             Long queueOffset = msgInner.getQueueOffset();
 
             // this msg maybe a inner-batch msg.
@@ -2156,6 +2177,7 @@ public class CommitLog implements Swappable {
                 final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
                 if (messageExt.isWaitStoreMsgOK()) {
                     GroupCommitRequest request = new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes(), CommitLog.this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());
+                    //处理在规定时间内还没有刷盘成功的请求。
                     flushDiskWatcher.add(request);
                     service.putRequest(request);
                     return request.future();

@@ -64,6 +64,7 @@ public interface MappedFile {
      * Returns true if this {@code MappedFile} is available.
      * <p>
      * The mapped file will be not available if it's shutdown or destroyed.
+     * 如果映射的文件被关闭或销毁，则该文件将不可用。
      *
      * @return true if the file is available
      */
@@ -118,6 +119,7 @@ public interface MappedFile {
 
     /**
      * Returns the global offset of the current {code MappedFile}, it's a long value of the file name.
+     * 返回当前｛code MappedFile｝的全局偏移量，它是文件名的长值。
      *
      * @return the offset of this file
      */

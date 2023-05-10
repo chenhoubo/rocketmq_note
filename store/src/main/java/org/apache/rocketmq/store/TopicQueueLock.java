@@ -30,6 +30,7 @@ public class TopicQueueLock {
         this.size = 32;
         this.lockList = new ArrayList<>(32);
         for (int i = 0; i < this.size; i++) {
+            //非公平锁
             this.lockList.add(new ReentrantLock());
         }
     }

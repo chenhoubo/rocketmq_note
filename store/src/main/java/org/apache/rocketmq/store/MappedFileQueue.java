@@ -40,17 +40,26 @@ public class MappedFileQueue implements Swappable {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static final InternalLogger LOG_ERROR = InternalLoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
 
+    //数据文件存储的位置
     protected final String storePath;
 
+    //单个数据文件的大小
     protected final int mappedFileSize;
 
-    //写时复制容器存储
+    //数据文件列表
     protected final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
+    //分配文件服务
     protected final AllocateMappedFileService allocateMappedFileService;
 
+    //当前刷盘指针，表示该指针之前所有的数据全部持久化到了硬盘上面
     protected long flushedWhere = 0;
+
+    //当前数据提交指针，内存中byteBuffer当前的写指针，该值大于等于flushedWhere
     protected long committedWhere = 0;
+
+    //todo 同步刷盘的过程中 flushedWhere 等于 committedWhere
+
 
     protected volatile long storeTimestamp = 0;
 
@@ -498,6 +507,7 @@ public class MappedFileQueue implements Swappable {
         return deleteCount;
     }
 
+    //刷新文件(更新flushedWhere)
     public boolean flush(final int flushLeastPages) {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.flushedWhere, this.flushedWhere == 0);
@@ -515,6 +525,7 @@ public class MappedFileQueue implements Swappable {
         return result;
     }
 
+    //提交文件(更新committedWhere)
     public synchronized boolean commit(final int commitLeastPages) {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.committedWhere, this.committedWhere == 0);

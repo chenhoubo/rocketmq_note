@@ -67,6 +67,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
     protected FileChannel fileChannel;
     /**
      * Message will put to here first, and then reput to FileChannel if writeBuffer is not null.
+     * 如果writeBuffer不为null，消息将首先放在此处，然后再放在FileChannel中。
      */
     protected ByteBuffer writeBuffer = null;
     protected TransientStorePool transientStorePool = null;
@@ -206,6 +207,9 @@ public class DefaultMappedFile extends AbstractMappedFile {
         return appendMessagesInner(messageExtBatch, cb, putMessageContext);
     }
 
+    /**
+     * 将消息追加到MappedFile文件中
+     */
     public AppendMessageResult appendMessagesInner(final MessageExt messageExt, final AppendMessageCallback cb,
                                                    PutMessageContext putMessageContext) {
         assert messageExt != null;
@@ -238,6 +242,7 @@ public class DefaultMappedFile extends AbstractMappedFile {
             this.storeTimestamp = result.getStoreTimestamp();
             return result;
         }
+        // 如果currentPos大于或等于文件大小，表明文件已写满，抛出异常
         log.error("MappedFile.appendMessage return null, wrotePosition: {} fileSize: {}", currentPos, this.fileSize);
         return new AppendMessageResult(AppendMessageStatus.UNKNOWN_ERROR);
     }

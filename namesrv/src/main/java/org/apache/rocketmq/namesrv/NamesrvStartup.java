@@ -59,6 +59,7 @@ public class NamesrvStartup {
 
     public static void main0(String[] args) {
         try {
+            //构建参数，创建配置类对象
             parseCommandlineAndConfigFile(args);
             //创建namesrv控制器
             createAndStartNamesrvController();

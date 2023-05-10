@@ -39,6 +39,7 @@ import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 
+//主动拉的模式
 public class DefaultLitePullConsumer extends ClientConfig implements LitePullConsumer {
 
     private final InternalLogger log = ClientLogger.getLog();

@@ -19,12 +19,12 @@ public class Producer {
         producer.start();
 
         //同步消息。
-//        for (int i = 0; i < 10; i++) {
-//            String msg="hello world, 陈厚伯" + i;
-//            Message message = new Message("topic1","tag1",msg.getBytes());
-//            SendResult sendResult = producer.send(message);
-//            System.out.println(sendResult);
-//        }
+        for (int i = 0; i < 1; i++) {
+            String msg="hello world, 陈厚伯" + i;
+            Message message = new Message("topic1","*",msg.getBytes());
+            SendResult sendResult = producer.send(message);
+            System.out.println(sendResult);
+        }
 
         for (int i = 0; i < 10; i++) {
             String msg = "hello world, 陈厚伯" + i;
@@ -49,9 +49,9 @@ public class Producer {
 
             //延时消息
             //"1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h"
-            message.setDelayTimeLevel(1);
-            SendResult sendResult = producer.send(message);
-            System.out.println(sendResult);
+//            message.setDelayTimeLevel(1);
+//            SendResult sendResult = producer.send(message);
+//            System.out.println(sendResult);
         }
         //这里不能先关闭--需要等待回调是否成功
 //        producer.shutdown();
