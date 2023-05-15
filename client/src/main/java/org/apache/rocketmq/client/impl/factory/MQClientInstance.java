@@ -251,6 +251,9 @@ public class MQClientInstance {
         return mqList;
     }
 
+    /**
+     * 启动客户端代理
+     */
     public void start() throws MQClientException {
 
         synchronized (this) {
@@ -261,16 +264,15 @@ public class MQClientInstance {
                     if (null == this.clientConfig.getNamesrvAddr()) {
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
-                    // Start request-response channel
+                    // 启动通信模块
                     this.mQClientAPIImpl.start();
-                    // Start various schedule tasks
+                    // 启动定时任务（从 Namesrv 拉取路由、向 Broker 发送心跳等）
                     this.startScheduledTask();
-                    // Start pull service
+                    // 启动拉取消息服务
                     this.pullMessageService.start();
-                    // Start rebalance service
+                    //启动重平衡线程（负载均衡启动）
                     this.rebalanceService.start();
-                    // Start push service
-                    // 当消费失败的时候，需要把消息发回去
+                    // 启动默认生产者（用于将消费失败的消息重新生产到 Broker）
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
                     log.info("the client factory [{}] start OK", this.clientId);
                     this.serviceState = ServiceState.RUNNING;

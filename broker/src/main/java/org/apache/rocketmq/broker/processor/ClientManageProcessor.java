@@ -80,8 +80,9 @@ public class ClientManageProcessor implements NettyRequestProcessor {
             heartbeatData.getClientID(),
             request.getLanguage(),
             request.getVersion()
-        );
+        );//获取客户端信息
 
+        //解析客户端的 Consumer 的订阅元数据
         for (ConsumerData consumerData : heartbeatData.getConsumerDataSet()) {
             //Reject the PullConsumer
             if (brokerController.getBrokerConfig().isRejectPullConsumerEnable()) {
@@ -99,16 +100,18 @@ public class ClientManageProcessor implements NettyRequestProcessor {
                 }
             }
 
+            //获取 broker 中 Consumer 的订阅元数据
             SubscriptionGroupConfig subscriptionGroupConfig =
-                this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(
-                    consumerData.getGroupName());
+                this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(consumerData.getGroupName());
             boolean isNotifyConsumerIdsChangedEnable = true;
-            if (null != subscriptionGroupConfig) {
+            if (null != subscriptionGroupConfig) { //如果已存在订阅消息
+                //是否需要更新 Consumer 的id
                 isNotifyConsumerIdsChangedEnable = subscriptionGroupConfig.isNotifyConsumerIdsChangedEnable();
                 int topicSysFlag = 0;
                 if (consumerData.isUnitMode()) {
                     topicSysFlag = TopicSysFlag.buildSysFlag(false, true);
                 }
+                //创建 retry 的 topic，如果已存在直接返回
                 String newTopic = MixAll.getRetryTopic(consumerData.getGroupName());
                 this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(
                     newTopic,
@@ -116,13 +119,14 @@ public class ClientManageProcessor implements NettyRequestProcessor {
                     PermName.PERM_WRITE | PermName.PERM_READ, hasOrderTopicSub, topicSysFlag);
             }
 
+            //注册保存 Consumer 的订阅元数据
             boolean changed = this.brokerController.getConsumerManager().registerConsumer(
-                consumerData.getGroupName(),
-                clientChannelInfo,
-                consumerData.getConsumeType(),
-                consumerData.getMessageModel(),
-                consumerData.getConsumeFromWhere(),
-                consumerData.getSubscriptionDataSet(),
+                consumerData.getGroupName(),//消费组名
+                clientChannelInfo,//消费的客户端信息
+                consumerData.getConsumeType(),//消费方式 pull/push
+                consumerData.getMessageModel(),//消费模式 广播/集群
+                consumerData.getConsumeFromWhere(),//消费指针 接着上次消费/重头消费/指定时间消费等
+                consumerData.getSubscriptionDataSet(),//订阅元数据 包含订阅的topic ，tag等信息
                 isNotifyConsumerIdsChangedEnable
             );
 

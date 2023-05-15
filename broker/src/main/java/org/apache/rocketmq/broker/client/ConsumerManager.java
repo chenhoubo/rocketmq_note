@@ -126,15 +126,16 @@ public class ConsumerManager {
         ConsumeType consumeType, MessageModel messageModel, ConsumeFromWhere consumeFromWhere,
         final Set<SubscriptionData> subList, boolean isNotifyConsumerIdsChangedEnable, boolean updateSubscription) {
         long start = System.currentTimeMillis();
-        ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
-        if (null == consumerGroupInfo) {
+        ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);//是否消费组的消费信息
+        if (null == consumerGroupInfo) { //不存在则保存新的  ConsumerGroupInfo
             callConsumerIdsChangeListener(ConsumerGroupEvent.CLIENT_REGISTER, group, clientChannelInfo,
                 subList.stream().map(SubscriptionData::getTopic).collect(Collectors.toSet()));
             ConsumerGroupInfo tmp = new ConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere);
-            ConsumerGroupInfo prev = this.consumerTable.putIfAbsent(group, tmp);
+            ConsumerGroupInfo prev = this.consumerTable.putIfAbsent(group, tmp);//保存新的组的消费信息
             consumerGroupInfo = prev != null ? prev : tmp;
         }
 
+        //更新 consumerGroupInfo 信息
         boolean r1 =
             consumerGroupInfo.updateChannel(clientChannelInfo, consumeType, messageModel,
                 consumeFromWhere);

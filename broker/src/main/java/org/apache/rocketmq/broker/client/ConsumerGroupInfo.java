@@ -127,6 +127,7 @@ public class ConsumerGroupInfo {
      * @param consumeFromWhere indicate the position when the client consume message firstly.
      * @return the result that if new connector is connected or not.
      */
+    //更新客户端通信信息
     public boolean updateChannel(final ClientChannelInfo infoNew, ConsumeType consumeType,
         MessageModel messageModel, ConsumeFromWhere consumeFromWhere) {
         boolean updated = false;
@@ -134,8 +135,10 @@ public class ConsumerGroupInfo {
         this.messageModel = messageModel;
         this.consumeFromWhere = consumeFromWhere;
 
+        //找到 客户端的通信 channel 的客户端信息
         ClientChannelInfo infoOld = this.channelInfoTable.get(infoNew.getChannel());
         if (null == infoOld) {
+            //没有的话直接存入新的 channel 的客户端信息
             ClientChannelInfo prev = this.channelInfoTable.put(infoNew.getChannel(), infoNew);
             if (null == prev) {
                 log.info("new consumer connected, group: {} {} {} channel: {}", this.groupName, consumeType,
@@ -145,6 +148,7 @@ public class ConsumerGroupInfo {
 
             infoOld = infoNew;
         } else {
+            //如果已经存在了 channel 判断 channel 是否已经发生变化，变化了则更新客户端信息
             if (!infoOld.getClientId().equals(infoNew.getClientId())) {
                 log.error(
                     "ConsumerGroupInfo: consumer channel exists in broker, but clientId is not the same one, "
@@ -166,12 +170,14 @@ public class ConsumerGroupInfo {
      * @param subList set of {@link SubscriptionData}
      * @return the boolean indicates the subscription has changed or not.
      */
+    //更新Consumer的订阅元数据
     public boolean updateSubscription(final Set<SubscriptionData> subList) {
         boolean updated = false;
 
         for (SubscriptionData sub : subList) {
             SubscriptionData old = this.subscriptionTable.get(sub.getTopic());
             if (old == null) {
+                //不存在topic的订阅数据则更新
                 SubscriptionData prev = this.subscriptionTable.putIfAbsent(sub.getTopic(), sub);
                 if (null == prev) {
                     updated = true;
@@ -179,6 +185,7 @@ public class ConsumerGroupInfo {
                         this.groupName,
                         sub.toString());
                 }
+                //存在的话则比较版本号，如果是新的版本号，则更新为新的版本号
             } else if (sub.getSubVersion() > old.getSubVersion()) {
                 if (this.consumeType == ConsumeType.CONSUME_PASSIVELY) {
                     log.info("subscription changed, group: {} OLD: {} NEW: {}",
@@ -192,6 +199,7 @@ public class ConsumerGroupInfo {
             }
         }
 
+        //移除已经过时的订阅元数据
         Iterator<Entry<String, SubscriptionData>> it = this.subscriptionTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, SubscriptionData> next = it.next();

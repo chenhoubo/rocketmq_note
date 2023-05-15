@@ -29,13 +29,14 @@ public class Consumer {
         consumer.registerMessageListener(new MessageListenerConcurrently(){
             @Override
             public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> list, ConsumeConcurrentlyContext consumeConcurrentlyContext) {
-                for (MessageExt messageExt : list) {
-                    System.out.println(messageExt);
-                    byte[] body = messageExt.getBody();
-                    System.out.println(new String(body));
-                    System.out.println("===============================================");
-                }
-                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+                throw new RuntimeException();
+//                for (MessageExt messageExt : list) {
+//                    System.out.println(messageExt);
+//                    byte[] body = messageExt.getBody();
+//                    System.out.println(new String(body));
+//                    System.out.println("===============================================");
+//                }
+//                return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
             }
         });
         consumer.start();
